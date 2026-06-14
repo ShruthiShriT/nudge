@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nudge — Your Daily Goal Reminder</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --accent: #c8f04a;
+      --accent-dim: #9bbf2e;
+      --text: #f0f0f0;
+      --text-muted: #888;
+      --border: #2e2e2e;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      margin-left: 1.5rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 3rem;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      color: var(--text);
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+    }
+
+    /* MAIN CARD */
+    .card-wrap {
+      max-width: 560px;
+      margin: 0 auto 4rem;
+      padding: 0 1.5rem;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 1rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* PANELS */
+    .panel { display: none; padding: 1.75rem; }
+    .panel.active { display: block; }
+
+    /* FORM ELEMENTS */
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 1.1rem;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    select option { background: var(--surface2); }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .btn {
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--accent);
+      color: #0f0f0f;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { background: var(--accent-dim); }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      margin-top: 0.75rem;
+    }
+    .btn-secondary:hover { background: var(--border); }
+
+    /* NUDGE DISPLAY */
+    .nudge-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+      display: none;
+    }
+
+    .nudge-box.visible { display: block; }
+
+    .nudge-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+    }
+
+    .nudge-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.15rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    /* STATUS */
+    .status {
+      font-size: 0.85rem;
+      padding: 0.6rem 0.9rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .status.success {
+      background: #1a2e0a;
+      color: var(--accent);
+      border: 1px solid #3a5a1a;
+      display: block;
+    }
+
+    .status.error {
+      background: #2e0a0a;
+      color: #f87171;
+      border: 1px solid #5a1a1a;
+      display: block;
+    }
+
+    /* FOOTER */
+    footer {
+      margin-top: auto;
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.25rem 0;
+    }
+
+    .field-group { margin-bottom: 0.25rem; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <span class="logo">Nudge</span>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <p class="hero-eyebrow">Your daily goal reminder</p>
+    <h1>Stay aligned with what <em>actually</em> matters</h1>
+    <p>Every day, Nudge reads your goals and past wins, then sends you a personalised message to keep you moving forward.</p>
+  </div>
+
+  <div class="card-wrap">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('signup')">Get Started</button>
+        <button class="tab" onclick="switchTab('goals')">My Goals</button>
+        <button class="tab" onclick="switchTab('wins')">My Wins</button>
+        <button class="tab" onclick="switchTab('nudge')">Today's Nudge</button>
+      </div>
+
+      <!-- SIGNUP -->
+      <div class="panel active" id="panel-signup">
+        <div class="field-group">
+          <label>Your email</label>
+          <input type="email" id="signup-email" placeholder="you@email.com" />
+        </div>
+        <div id="signup-status" class="status"></div>
+        <button class="btn" onclick="createUser()">Create my account</button>
+      </div>
+
+      <!-- GOALS -->
+      <div class="panel" id="panel-goals">
+        <div class="field-group">
+          <label>Email</label>
+          <input type="email" id="goals-email" placeholder="you@email.com" />
+        </div>
+        <div class="field-group">
+          <label>Goal type</label>
+          <select id="goal-type">
+            <option value="long_term">Long term</option>
+            <option value="mid_term">Mid term</option>
+            <option value="short_term">Short term</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Goal</label>
+          <textarea id="goal-desc" placeholder="e.g. Get a Data Analyst job by Oct 2026"></textarea>
+        </div>
+        <div id="goals-status" class="status"></div>
+        <button class="btn" onclick="addGoal()">Save goal</button>
+      </div>
+
+      <!-- WINS -->
+      <div class="panel" id="panel-wins">
+        <div class="field-group">
+          <label>Email</label>
+          <input type="email" id="wins-email" placeholder="you@email.com" />
+        </div>
+        <div class="field-group">
+          <label>A win to remember</label>
+          <textarea id="win-desc" placeholder="e.g. Completed BQ26 certification"></textarea>
+        </div>
+        <div id="wins-status" class="status"></div>
+        <button class="btn" onclick="addWin()">Add win</button>
+      </div>
+
+      <!-- NUDGE -->
+      <div class="panel" id="panel-nudge">
+        <div class="field-group">
+          <label>Email</label>
+          <input type="email" id="nudge-email" placeholder="you@email.com" />
+        </div>
+        <div id="nudge-status" class="status"></div>
+        <div class="nudge-box" id="nudge-box">
+          <div class="nudge-label">Today's Nudge</div>
+          <div class="nudge-text" id="nudge-text"></div>
+        </div>
+        <button class="btn" id="nudge-btn" onclick="getNudge()">Generate my nudge</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Built with Python, FastAPI, Gemini AI &amp; Supabase &nbsp;·&nbsp; Nudge © 2026
+  </footer>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        const names = ['signup', 'goals', 'wins', 'nudge'];
+        t.classList.toggle('active', names[i] === name);
+      });
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+    }
+
+    function showStatus(id, msg, type) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.className = 'status ' + type;
+    }
+
+    async function createUser() {
+      const email = document.getElementById('signup-email').value.trim();
+      if (!email) return showStatus('signup-status', 'Enter your email first.', 'error');
+      try {
+        const res = await fetch(`${API}/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showStatus('signup-status', data.message + ' — now add your goals!', 'success');
+          // Pre-fill email in other tabs
+          document.getElementById('goals-email').value = email;
+          document.getElementById('wins-email').value = email;
+          document.getElementById('nudge-email').value = email;
+        } else {
+          showStatus('signup-status', data.detail || 'Something went wrong.', 'error');
+        }
+      } catch {
+        showStatus('signup-status', 'Cannot connect to server. Make sure the API is running.', 'error');
+      }
+    }
+
+    async function addGoal() {
+      const email = document.getElementById('goals-email').value.trim();
+      const goal_type = document.getElementById('goal-type').value;
+      const description = document.getElementById('goal-desc').value.trim();
+      if (!email || !description) return showStatus('goals-status', 'Fill in all fields.', 'error');
+      try {
+        const res = await fetch(`${API}/goals`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, goal_type, description })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showStatus('goals-status', 'Goal saved!', 'success');
+          document.getElementById('goal-desc').value = '';
+        } else {
+          showStatus('goals-status', data.detail || 'Something went wrong.', 'error');
+        }
+      } catch {
+        showStatus('goals-status', 'Cannot connect to server.', 'error');
+      }
+    }
+
+    async function addWin() {
+      const email = document.getElementById('wins-email').value.trim();
+      const description = document.getElementById('win-desc').value.trim();
+      if (!email || !description) return showStatus('wins-status', 'Fill in all fields.', 'error');
+      try {
+        const res = await fetch(`${API}/wins`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, description })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showStatus('wins-status', 'Win added!', 'success');
+          document.getElementById('win-desc').value = '';
+        } else {
+          showStatus('wins-status', data.detail || 'Something went wrong.', 'error');
+        }
+      } catch {
+        showStatus('wins-status', 'Cannot connect to server.', 'error');
+      }
+    }
+
+    async function getNudge() {
+      const email = document.getElementById('nudge-email').value.trim();
+      if (!email) return showStatus('nudge-status', 'Enter your email first.', 'error');
+      const btn = document.getElementById('nudge-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      document.getElementById('nudge-box').classList.remove('visible');
+      try {
+        const res = await fetch(`${API}/nudge/${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('nudge-text').textContent = data.nudge;
+          document.getElementById('nudge-box').classList.add('visible');
+          showStatus('nudge-status', '', '');
+        } else {
+          showStatus('nudge-status', data.detail || 'Something went wrong.', 'error');
+        }
+      } catch {
+        showStatus('nudge-status', 'Cannot connect to server.', 'error');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Generate my nudge';
+    }
+  </script>
+</body>
+</html>
