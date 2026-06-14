@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from supabase import create_client
@@ -48,7 +49,7 @@ def get_user_id(email: str) -> str:
 
 @app.get("/")
 def root():
-    return {"message": "Nudge API is running"}
+    return FileResponse("index.html")
 
 
 @app.post("/users")
