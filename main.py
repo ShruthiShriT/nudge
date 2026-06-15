@@ -118,3 +118,7 @@ def get_nudge(email: str):
     }).execute()
 
     return {"email": email, "nudge": message}
+
+# Start scheduler when app starts
+from scheduler import start_scheduler
+start_scheduler()
