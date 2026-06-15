@@ -20,7 +20,7 @@ IST = pytz.timezone("Asia/Kolkata")
 
 
 def send_daily_nudges():
-    logger.info("⏰ Scheduler triggered — sending daily nudges...")
+    logger.info("Scheduler triggered — sending daily nudges...")
 
     # Fetch all users
     users = supabase.table("users").select("*").execute().data
@@ -41,7 +41,7 @@ def send_daily_nudges():
             goals = {g["goal_type"]: g["description"] for g in goals_data}
 
             if not goals:
-                logger.info(f"⚠️  Skipping {email} — no goals set")
+                logger.info(f"Skipping {email} — no goals set")
                 continue
 
             # Fetch wins
@@ -58,12 +58,12 @@ def send_daily_nudges():
             }).execute()
 
             # TODO: Replace this print with whatsapp_send(whatsapp, message) once Meta is ready
-            logger.info(f"📱 Nudge for {name} ({whatsapp}):\n{message}\n{'-'*50}")
+            logger.info(f" Nudge for {name} ({whatsapp}):\n{message}\n{'-'*50}")
 
         except Exception as e:
-            logger.error(f"❌ Error processing {user.get('email')}: {e}")
+            logger.error(f" Error processing {user.get('email')}: {e}")
 
-    logger.info("✅ Done sending nudges!")
+    logger.info(" Done sending nudges!")
 
 
 def start_scheduler():
@@ -75,5 +75,5 @@ def start_scheduler():
         replace_existing=True
     )
     scheduler.start()
-    logger.info("🗓️  Scheduler started — nudges will fire at 8:00 AM IST daily")
+    logger.info("  Scheduler started — nudges will fire at 8:00 AM IST daily")
     return scheduler
