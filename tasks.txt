@@ -1,0 +1,16 @@
+Okay let me think through this properly based on everything we discussed — goals, WhatsApp, UI, scheduler, launch! Here's the full issue list:
+
+🔴 Backend
+#Issue TitleDescription1Add whatsapp_number to users tableAdd field in Supabase + update /users endpoint in main.py to accept it2Improve Gemini promptStructured output — greeting, goal reminder, win reference, today's action. Not just 2-3 lines3Add daily schedulerAPScheduler in scheduler.py — trigger nudge for all users at 8am IST daily4Build whatsapp_sender.pySend WhatsApp message via Meta Business API5Connect scheduler to WhatsAppscheduler.py calls whatsapp_sender for every active user at 8am
+
+🟡 Frontend
+#Issue TitleDescription6Full UI redesignClean, minimal, mobile friendly — new look for index.html7Add WhatsApp number field to signupUpdate signup form to collect +91 number8Better nudge displayFormat nudge output with sections not plain text blob
+
+🟢 Infrastructure
+#Issue TitleDescription9Move from Render free to paid tierAvoid spin down — upgrade when ready to launch10Custom domain setupBuy domain, connect to Render
+
+🔵 Launch
+#Issue TitleDescription11Write READMEProject description, setup steps, tech stack, screenshots12Friend testingSend to 3 friends, collect feedback, fix bugs13Instagram contentScreen recording + caption ready for July 12
+
+Total = 13 issues. That's your entire roadmap to launch! 🚀
+Want me to write the exact copy-paste text for each GitHub issue right now? You just open GitHub → Issues → New Issue → paste → done. 13 issues in 10 minutes!

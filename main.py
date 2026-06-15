@@ -15,7 +15,6 @@ supabase = create_client(url, key)
 
 app = FastAPI(title="Nudge API")
 
-# Allow frontend to talk to this backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,6 +25,8 @@ app.add_middleware(
 # --- Request models ---
 class CreateUserRequest(BaseModel):
     email: str
+    name: str
+    whatsapp_number: str
 
 class GoalRequest(BaseModel):
     email: str
@@ -37,12 +38,12 @@ class WinRequest(BaseModel):
     description: str
 
 
-# --- Helper: get user id by email ---
-def get_user_id(email: str) -> str:
-    result = supabase.table("users").select("id").eq("email", email).execute()
+# --- Helper: get user by email ---
+def get_user(email: str) -> dict:
+    result = supabase.table("users").select("*").eq("email", email).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail=f"User {email} not found")
-    return result.data[0]["id"]
+    return result.data[0]
 
 
 # --- Endpoints ---
@@ -57,7 +58,11 @@ def create_user(req: CreateUserRequest):
     existing = supabase.table("users").select("*").eq("email", req.email).execute()
     if existing.data:
         return {"message": "User already exists", "user": existing.data[0]}
-    result = supabase.table("users").insert({"email": req.email}).execute()
+    result = supabase.table("users").insert({
+        "email": req.email,
+        "name": req.name,
+        "whatsapp_number": req.whatsapp_number
+    }).execute()
     return {"message": "User created", "user": result.data[0]}
 
 
@@ -65,9 +70,9 @@ def create_user(req: CreateUserRequest):
 def add_goal(req: GoalRequest):
     if req.goal_type not in ["long_term", "mid_term", "short_term"]:
         raise HTTPException(status_code=400, detail="goal_type must be long_term, mid_term, or short_term")
-    user_id = get_user_id(req.email)
+    user = get_user(req.email)
     result = supabase.table("goals").insert({
-        "user_id": user_id,
+        "user_id": user["id"],
         "goal_type": req.goal_type,
         "description": req.description
     }).execute()
@@ -76,9 +81,9 @@ def add_goal(req: GoalRequest):
 
 @app.post("/wins")
 def add_win(req: WinRequest):
-    user_id = get_user_id(req.email)
+    user = get_user(req.email)
     result = supabase.table("wins").insert({
-        "user_id": user_id,
+        "user_id": user["id"],
         "description": req.description
     }).execute()
     return {"message": "Win added", "win": result.data[0]}
@@ -86,7 +91,9 @@ def add_win(req: WinRequest):
 
 @app.get("/nudge/{email}")
 def get_nudge(email: str):
-    user_id = get_user_id(email)
+    user = get_user(email)
+    user_id = user["id"]
+    name = user.get("name") or "Friend"
 
     # Fetch goals
     goals_result = supabase.table("goals").select("*").eq("user_id", user_id).execute()
@@ -101,8 +108,8 @@ def get_nudge(email: str):
     wins_result = supabase.table("wins").select("*").eq("user_id", user_id).execute()
     wins = [w["description"] for w in wins_result.data]
 
-    # Generate message
-    message = generate_nudge(goals, wins)
+    # Generate message with name
+    message = generate_nudge(goals, wins, name=name)
 
     # Save to history
     supabase.table("daily_messages").insert({
