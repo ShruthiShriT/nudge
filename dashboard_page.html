@@ -1,0 +1,1561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard — Nudge</title>
+<meta name="theme-color" content="#F5F1FF">
+<style>
+  :root{
+    --bg: #F5F1FF;
+    --accent: #A78BFA;
+    --accent-tint: #EDE6FF;
+    --ink: #111111;
+    --font-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --sidebar-w: 232px;
+    --bottomnav-h: 64px;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  a{ color: inherit; text-decoration: none; }
+  button{ font-family: inherit; }
+  a, button{
+    transition: opacity 0.18s ease, background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  button:active{ transform: scale(0.98); }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* ---------- App shell ---------- */
+  .app{
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- Sidebar (desktop / tablet) ---------- */
+  .sidebar{
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 1.25rem;
+    border-right: 1px solid rgba(17,17,17,0.08);
+  }
+
+  .logo{
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    padding: 0 0.5rem;
+    margin-bottom: 2.25rem;
+  }
+  .logo .dark{ color: var(--ink); }
+  .logo .accent{ color: var(--accent); }
+
+  .nav-list{
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .nav-item{
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--ink);
+    opacity: 0.65;
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: opacity 0.18s ease, background 0.18s ease;
+  }
+  .nav-item:hover{ opacity: 1; }
+  .nav-item.active{
+    opacity: 1;
+    background: var(--accent-tint);
+    color: var(--ink);
+  }
+  .nav-item .icon{
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-item svg{ width: 100%; height: 100%; }
+
+  .sidebar-footer{
+    margin-top: auto;
+    padding-top: 1.5rem;
+  }
+  .sidebar-user{
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.6rem 0.5rem;
+    border-radius: 10px;
+  }
+  .avatar{
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s ease;
+  }
+  .avatar:active{ transform: scale(0.96); }
+
+  .avatar-menu-wrap{ position: relative; }
+  .avatar-menu{
+    position: absolute;
+    bottom: calc(100% + 0.5rem);
+    left: 0;
+    min-width: 180px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.25);
+    padding: 0.4rem;
+    display: none;
+    z-index: 30;
+  }
+  .avatar-menu.open{ display: block; }
+  .avatar-menu button{
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.18s ease;
+  }
+  .avatar-menu button:hover{ background: var(--bg); }
+  .avatar-menu button.danger{ color: #B3432B; }
+  .sidebar-user .who{ overflow: hidden; }
+  .sidebar-user .name{
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sidebar-user .email{
+    font-size: 0.74rem;
+    opacity: 0.45;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---------- Main content ---------- */
+  .main{
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content-wrap{
+    max-width: 880px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.4rem 2rem clamp(2rem, 6vw, 3rem);
+  }
+
+  /* ---------- Today's nudge — hero WhatsApp bubble ---------- */
+  .nudge-hero{
+    margin-bottom: 1rem;
+  }
+  .nudge-hero-compact{ display: none; }
+  .nudge-hero.compact .nudge-hero-full{ display: none; }
+  .nudge-hero.compact .nudge-hero-compact{
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 0.7rem 1rem;
+    box-shadow: 0 20px 40px -25px rgba(17,17,17,0.12);
+  }
+  .compact-label{
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .compact-preview{
+    flex: 1;
+    min-width: 0;
+    font-size: 0.84rem;
+    opacity: 0.65;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .compact-link{
+    background: none;
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nudge-greet{
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    margin: 0 0 0.6rem;
+  }
+  .nudge-hero-bg{
+    padding: 0;
+  }
+  .wa-bubble{
+    background: #ffffff;
+    border-radius: 14px;
+    border-top-left-radius: 3px;
+    padding: 0.75rem 1.2rem;
+    box-shadow: 0 18px 36px -18px rgba(17,17,17,0.18);
+    max-width: 600px;
+    position: relative;
+    cursor: pointer;
+  }
+  .wa-bubble::before{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -9px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 10px 12px 0;
+    border-color: transparent #ffffff transparent transparent;
+  }
+  .wa-eyebrow{
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin: 0 0 0.5rem;
+  }
+  .wa-bubble .line{
+    font-size: 0.92rem;
+    margin: 0 0 0.45rem;
+    line-height: 1.45;
+  }
+  .wa-bubble .line:last-of-type{ margin-bottom: 0; }
+  .wa-bubble .muted{ opacity: 0.7; }
+  .wa-bubble .accent-line{
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .wa-bubble .wa-meta{
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.3rem;
+    margin-top: 0.6rem;
+  }
+  .wa-bubble .wa-time{ font-size: 0.68rem; opacity: 0.35; }
+  .wa-bubble .wa-ticks{ width: 12px; height: 12px; color: #4FC3F7; opacity: 0.7; }
+
+  .wa-bubble .line.extra{
+    max-height: 200px;
+    overflow: hidden;
+    transition: max-height 0.22s ease, opacity 0.22s ease;
+  }
+  .nudge-hero-bg.collapsed .wa-bubble .line.extra{
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+  }
+
+  .wa-cta{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 0.45rem 0.85rem;
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #ffffff;
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+  .wa-cta:hover{ transform: translateX(2px); background: #9171F0; }
+  .wa-cta svg{ width: 12px; height: 12px; }
+
+  /* ---------- Section divider ---------- */
+  .section-eyebrow{
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0 1rem;
+  }
+  .section-eyebrow .eyebrow-text{
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .section-eyebrow .rule{
+    width: 140px;
+    flex: none;
+    height: 1px;
+    background: rgba(17,17,17,0.1);
+  }
+
+  /* ---------- Streak tracker (compact) ---------- */
+  .streak-panel{
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+    padding: 0.55rem 1.2rem 0.65rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.1rem;
+  }
+  .streak-caption{
+    flex-basis: 100%;
+    text-align: center;
+    font-size: 0.76rem;
+    opacity: 0.45;
+    margin: 0;
+  }
+  .streak-head{
+    flex-shrink: 0;
+  }
+  .streak-title{
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .streak-sep{ opacity: 0.3; margin: 0 0.1rem; }
+  .streak-count{
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 1;
+  }
+  .streak-count strong{ color: var(--accent); font-weight: 800; }
+  .streak-days{
+    display: flex;
+    gap: 0.4rem;
+    flex: 1;
+  }
+  .streak-day{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .streak-day .dlabel{
+    font-size: 0.62rem;
+    font-weight: 700;
+    opacity: 0.4;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .streak-day .dot{
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1.5px solid rgba(17,17,17,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .streak-day.done .dot{ cursor: default; }
+  .streak-day .dot svg{ width: 11px; height: 11px; }
+  .streak-day.done .dot{
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+  }
+  .streak-day.today .dot{
+    border-color: var(--ink);
+    border-width: 2px;
+  }
+  .streak-day.future .dot{ opacity: 0.35; }
+  .streak-mark-btn{
+    flex-shrink: 0;
+    padding: 0.6rem 0.95rem;
+    font-size: 0.8rem;
+  }
+  .streak-mark-btn[disabled]{
+    opacity: 0.45;
+    cursor: default;
+  }
+  .streak-mark-btn[disabled]:hover{ background: var(--ink); }
+  .page-head{
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+  }
+  .page-head h1{
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 1.7rem;
+    margin: 0 0 0.3rem;
+    letter-spacing: -0.01em;
+  }
+  .page-head p{
+    font-size: 0.82rem;
+    opacity: 0.65;
+    margin: 0;
+  }
+
+  .btn-primary{
+    background: var(--ink);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.7rem 1.1rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s ease, transform 0.1s ease;
+  }
+  .btn-primary:hover{ background: #2b2b2b; }
+  .btn-primary:active{ transform: scale(0.98); }
+
+  .btn-secondary{
+    background: none;
+    color: var(--ink);
+    opacity: 0.65;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.65rem 0.9rem;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+  }
+  .btn-secondary:hover{ opacity: 1; border-color: rgba(17,17,17,0.25); }
+  .btn-secondary:active{ transform: scale(0.98); }
+
+  /* ---------- Sections ---------- */
+  .section{ display: none; }
+  .section.active{ display: block; animation: fadeUp 0.28s ease both; }
+  @keyframes fadeUp{
+    0%{ opacity: 0; transform: translateY(6px); }
+    100%{ opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Streak tracker ---------- */
+  .streak-panel{
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+    padding: 1.4rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .streak-head{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .streak-title{
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .streak-count{
+    font-size: 0.8rem;
+    opacity: 0.65;
+  }
+  .streak-count strong{ color: var(--accent); opacity: 1; }
+  .streak-days{
+    display: flex;
+    gap: 0.6rem;
+  }
+  .streak-day{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .streak-day .dlabel{
+    font-size: 0.68rem;
+    font-weight: 700;
+    opacity: 0.45;
+    text-transform: uppercase;
+  }
+  .streak-day .dot{
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1.5px solid rgba(17,17,17,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .streak-day .dot svg{ width: 14px; height: 14px; }
+  .streak-day.done .dot{
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+  }
+  .streak-day.today .dot{
+    border-color: var(--ink);
+    border-width: 2px;
+  }
+  .streak-day.future .dot{ opacity: 0.35; }
+  .streak-mark-btn{
+    margin-top: 1.1rem;
+    width: 100%;
+  }
+  .streak-mark-btn[disabled]{
+    opacity: 0.45;
+    cursor: default;
+  }
+  .streak-mark-btn[disabled]:hover{ background: var(--ink); }
+
+  .story-line{
+    font-size: 0.85rem;
+    opacity: 0.65;
+    margin: -0.5rem 0 1.1rem;
+  }
+  .story-line strong{ color: var(--accent); opacity: 1; font-weight: 700; }
+
+  .goal-progress{ margin-top: 0.55rem; }
+  .progress-track{
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(17,17,17,0.08);
+    overflow: hidden;
+  }
+  .progress-fill{
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+  }
+  .progress-label{
+    display: block;
+    font-size: 0.72rem;
+    opacity: 0.45;
+    margin-top: 0.35rem;
+  }
+
+  /* ---------- Goal cards ---------- */
+  .goal-grid{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .goal-card{
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+    padding: 1.4rem 1.3rem;
+    min-height: 168px;
+    display: flex;
+    flex-direction: column;
+  }
+  .goal-card.primary{
+    background: #ffffff;
+    color: var(--ink);
+    grid-column: span 3;
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem;
+    border: 1.5px solid var(--accent);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .goal-card.primary:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -22px rgba(167,139,250,0.4);
+  }
+  .goal-card .badge{
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.65;
+    margin-bottom: 0.6rem;
+  }
+  .goal-card.primary .badge{
+    color: var(--accent);
+    opacity: 1;
+    margin: 0;
+    flex-shrink: 0;
+    background: var(--accent-tint);
+    padding: 0.3rem 0.6rem;
+    border-radius: 7px;
+  }
+  .goal-card .timeframe{
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.45;
+    margin: 0 0 0.5rem;
+  }
+  .goal-card.primary .timeframe{ display: none; }
+  .goal-card .goal-text{
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    line-height: 1.4;
+    margin: 0;
+    flex: 1;
+  }
+  .goal-card.primary .goal-text{ font-size: 1.05rem; flex: 1; min-width: 0; }
+  .goal-card .goal-meta{
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    opacity: 0.45;
+  }
+  .goal-card.primary .goal-meta{
+    margin: 0;
+    flex-shrink: 0;
+    opacity: 0.45;
+    white-space: nowrap;
+  }
+
+  .goal-card.empty{
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: transparent;
+    box-shadow: none;
+    border: 1.5px dashed rgba(17,17,17,0.18);
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease;
+  }
+  .goal-card.empty:hover{ border-color: var(--accent); background: rgba(167,139,250,0.06); }
+  .goal-card.empty .plus{
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent-tint);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+  }
+  .goal-card.empty .add-label{
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.65;
+  }
+  .goal-card.empty .add-sub{
+    font-size: 0.74rem;
+    opacity: 0.45;
+    margin-top: 0.2rem;
+  }
+
+  /* ---------- Wins list ---------- */
+  .win-row{
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+    padding: 0.8rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 0.6rem;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .win-row:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 22px 44px -22px rgba(17,17,17,0.16);
+  }
+  .win-row .win-icon.emoji{
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-tint);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+  }
+  .win-row .win-text{ flex: 1; min-width: 0; }
+  .win-row .win-title{
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.22rem;
+  }
+  .win-row .win-sub{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+  }
+  .win-row .win-goal-tag{
+    font-size: 0.69rem;
+    font-weight: 600;
+    color: var(--accent);
+    opacity: 0.75;
+    background: none;
+    padding: 0;
+  }
+  .win-row .win-date{
+    font-size: 0.72rem;
+    font-weight: 400;
+    opacity: 0.42;
+    white-space: nowrap;
+  }
+
+  .see-all-link{
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    opacity: 0.75;
+    margin-top: 0.3rem;
+  }
+  .see-all-link:hover{ opacity: 1; }
+
+  .empty-state{
+    text-align: center;
+    padding: 2.5rem 1rem;
+    opacity: 0.45;
+    font-size: 0.88rem;
+  }
+
+  /* ---------- Profile / Settings ---------- */
+  .panel{
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+    transition: box-shadow 0.2s ease;
+  }
+  .panel:hover{
+    box-shadow: 0 34px 64px -25px rgba(17,17,17,0.16);
+  }
+  .panel-head{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.6rem;
+  }
+  .panel-head h2{
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  .edit-btn{
+    color: var(--accent);
+    border-color: rgba(167,139,250,0.4);
+    opacity: 1;
+  }
+  .edit-btn:hover{ border-color: var(--accent); background: var(--accent-tint); }
+
+  .field-row{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .field{ margin-bottom: 1.1rem; }
+  .field:last-child{ margin-bottom: 0; }
+  .field label{
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0.65;
+    margin-bottom: 0.4rem;
+  }
+  .field .value{
+    font-size: 0.95rem;
+    padding: 0.7rem 0;
+  }
+  .field input,
+  .field select{
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    color: #000000;
+    background: #ffffff;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    outline: none;
+    transition: border-color 0.18s ease, background 0.18s ease;
+  }
+  .field input:focus,
+  .field select:focus{ border-color: var(--accent); }
+  .field input:disabled{
+    background: #ffffff;
+    border-color: rgba(17,17,17,0.1);
+    opacity: 0.85;
+    color: var(--ink);
+  }
+  .time-display{
+    font-size: 0.92rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--bg);
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+  }
+
+  .delivery-panel{ padding: 1.2rem 1.75rem 1.3rem; }
+  .delivery-panel .panel-head{ margin-bottom: 1rem; }
+  .delivery-row{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 0.55rem;
+  }
+  .delivery-row.muted{
+    justify-content: space-between;
+    font-weight: 400;
+    opacity: 0.6;
+    margin-bottom: 0.8rem;
+  }
+  .delivery-dot{
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #25D366;
+  }
+  .delivery-link{
+    background: none;
+    border: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .edit-actions{
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+
+  .settings-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(17,17,17,0.08);
+  }
+  .settings-row:last-child{ border-bottom: none; }
+  .settings-row .label{ font-size: 0.92rem; font-weight: 600; }
+  .settings-row .desc{ font-size: 0.8rem; opacity: 0.55; margin-top: 0.2rem; }
+
+  .danger-text{ color: #B3432B; }
+  .delete-btn{
+    color: #B3432B;
+    border-color: rgba(179,67,43,0.4);
+    opacity: 1;
+  }
+  .delete-btn:hover{ border-color: #B3432B; background: rgba(179,67,43,0.06); }
+
+  .toast{
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.7rem 1.2rem;
+    border-radius: 10px;
+    box-shadow: 0 20px 40px -16px rgba(17,17,17,0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 60;
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(17,17,17,0.35);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 50;
+  }
+  .modal-overlay.open{ display: flex; }
+  .modal{
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.25);
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 420px;
+  }
+  .modal h2{
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 1.2rem;
+    margin: 0 0 1.25rem;
+  }
+  .modal textarea{
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    min-height: 90px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.18s ease;
+  }
+  .modal textarea:focus{ border-color: var(--accent); }
+  .modal-actions{
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+  .modal-actions .btn-primary, .modal-actions .btn-secondary{ flex: 1; }
+
+  /* ---------- Bottom nav (mobile) ---------- */
+  .bottom-nav{
+    display: none;
+  }
+
+  /* ====================================================
+     RESPONSIVE BREAKPOINTS
+     ==================================================== */
+
+  /* iPad / tablet: collapse sidebar to icons-only */
+  @media (max-width: 1023px) and (min-width: 768px){
+    .sidebar{ width: 76px; padding: 1.5rem 0.75rem; align-items: center; }
+    .logo{ font-size: 0; padding: 0; margin-bottom: 2rem; }
+    .logo::before{ content: 'N'; font-size: 1.3rem; color: var(--ink); }
+    .nav-item{ justify-content: center; padding: 0.7rem; }
+    .nav-item .label{ display: none; }
+    .sidebar-user .who{ display: none; }
+    .sidebar-user{ justify-content: center; padding: 0.6rem; }
+
+    .goal-grid{ grid-template-columns: 1fr 1fr; }
+    .goal-card.primary{ grid-column: span 2; flex-wrap: wrap; }
+    .field-row{ grid-template-columns: 1fr; }
+  }
+
+  /* Mobile: sidebar -> bottom nav */
+  @media (max-width: 767px){
+    .app{ flex-direction: column; }
+    .sidebar{ display: none; }
+
+    .content-wrap{
+      padding: 1.25rem 1.1rem calc(var(--bottomnav-h) + 1.75rem);
+    }
+
+    .mobile-topbar{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.1rem 0.25rem;
+    }
+
+    .wa-bubble{ max-width: 100%; padding: 0.95rem 1.1rem; }
+    .streak-days{ flex-basis: 100%; order: 3; }
+    .streak-mark-btn{ order: 2; margin-left: auto; }
+
+    .page-head{ flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .page-head .btn-primary{ width: 100%; }
+
+    .goal-grid{ grid-template-columns: 1fr; }
+    .goal-card.primary{
+      grid-column: span 1;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .goal-card.primary .goal-meta{ white-space: normal; }
+
+    .field-row{ grid-template-columns: 1fr; }
+
+    .panel{ padding: 1.4rem; }
+    .streak-panel{ padding: 1.1rem 1rem; }
+    .streak-days{ gap: 0.3rem; }
+    .streak-day .dot{ width: 28px; height: 28px; }
+    .streak-day .dlabel{ font-size: 0.6rem; }
+
+    .bottom-nav{
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--bottomnav-h);
+      background: #ffffff;
+      box-shadow: 0 -8px 24px -16px rgba(17,17,17,0.18);
+      z-index: 40;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bottom-nav-item{
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      opacity: 0.45;
+      transition: opacity 0.18s ease;
+    }
+    .bottom-nav-item.active{ opacity: 1; color: var(--accent); }
+    .bottom-nav-item svg{ width: 19px; height: 19px; }
+    .bottom-nav-item .bn-label{ font-size: 0.66rem; font-weight: 700; }
+  }
+
+  @media (min-width: 768px){
+    .mobile-topbar{ display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ---------- Sidebar (desktop / tablet) ---------- -->
+  <aside class="sidebar">
+    <a class="logo" href="/dashboard" onclick="goHome(event)"><span class="dark">Nudg</span><span class="accent">e</span></a>
+      <button class="nav-item active" data-section="goals" onclick="switchSection('goals')" title="Goals">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
+        <span class="label">Goals</span>
+      </button>
+      <button class="nav-item" data-section="wins" onclick="switchSection('wins')" title="Wins">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a1 1 0 0 0-1 1 5 5 0 0 0 4 4.9M17 5h3a1 1 0 0 1 1 1 5 5 0 0 1-4 4.9"/></svg></span>
+        <span class="label">Wins</span>
+      </button>
+      <button class="nav-item" data-section="profile" onclick="switchSection('profile')" title="Profile">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+        <span class="label">Profile</span>
+      </button>
+      <button class="nav-item" data-section="settings" onclick="switchSection('settings')" title="Settings">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+        <span class="label">Settings</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user avatar-menu-wrap">
+        <button class="avatar" onclick="toggleAvatarMenu('sidebarMenu')" aria-label="Account menu">S</button>
+        <div class="who">
+          <div class="name">Shruthi</div>
+          <div class="email">shruthi@example.com</div>
+        </div>
+        <div class="avatar-menu" id="sidebarMenu">
+          <button onclick="switchSection('profile'); closeAvatarMenus();">View profile</button>
+          <button class="danger" onclick="alert('Visual only — log out isn\'t wired yet.'); closeAvatarMenus();">Log out</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ---------- Main ---------- -->
+  <div class="main">
+
+    <div class="mobile-topbar">
+      <a class="logo" href="/dashboard" onclick="goHome(event)"><span class="dark">Nudg</span><span class="accent">e</span></a>
+      <div class="avatar-menu-wrap">
+        <button class="avatar" onclick="toggleAvatarMenu('topbarMenu')" aria-label="Account menu">S</button>
+        <div class="avatar-menu" id="topbarMenu" style="bottom:auto; top:calc(100% + 0.5rem); left:auto; right:0;">
+          <button onclick="switchSection('profile'); closeAvatarMenus();">View profile</button>
+          <button class="danger" onclick="alert('Visual only — log out isn\'t wired yet.'); closeAvatarMenus();">Log out</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-wrap">
+
+      <!-- Today's nudge — full hero on Goals, compact banner elsewhere -->
+      <div class="nudge-hero" id="nudgeHero">
+        <div class="nudge-hero-full">
+          <p class="nudge-greet">Good morning 👋</p>
+          <div class="nudge-hero-bg collapsed" id="nudgeHeroBg">
+            <div class="wa-bubble" onclick="toggleNudgeStrip()">
+              <p class="wa-eyebrow">Today's reminder</p>
+              <p class="line accent-line">Remember that 5k run this morning? That's proof you can show up.</p>
+              <p class="line muted extra">You're working toward running a half marathon by October — every week of training gets you closer.</p>
+              <p class="line muted extra">Today: take one small step toward this. No pressure — just progress.</p>
+              <p class="line extra">You've got this. One nudge at a time.</p>
+              <div class="wa-meta">
+                <span class="wa-time">Delivered 8:00 AM</span>
+                <svg class="wa-ticks" viewBox="0 0 16 11" fill="none"><path d="M1 5.5L4.5 9L11 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 5.5L9 9L15.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+          </div>
+          <button class="wa-cta" id="nudgeHint" onclick="toggleNudgeStrip()">
+            <span id="nudgeHintText">View today's nudge</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+
+        <div class="nudge-hero-compact">
+          <span class="compact-label">Today's reminder</span>
+          <span class="compact-preview">Remember that 5k run this morning? That's proof you can show up.</span>
+          <button class="compact-link" onclick="switchSection('goals')">View →</button>
+        </div>
+      </div>
+
+
+      <!-- ========== GOALS ========== -->
+      <section class="section active" data-section="goals">
+        <div class="section-eyebrow">
+          <span class="eyebrow-text">Goals</span>
+          <span class="rule"></span>
+        </div>
+        <div class="page-head">
+          <div>
+            <h1>Your goals</h1>
+            <p>One primary goal drives your daily nudges. Fill the other two timeframes anytime.</p>
+          </div>
+        </div>
+
+        <p class="story-line">You're building consistency. <strong>3 wins</strong> this week · longest streak <strong>4 days 🔥</strong></p>
+
+        <div class="streak-panel">
+          <div class="streak-head">
+            <div class="streak-title">This week's check-ins <span class="streak-sep">·</span> <span class="streak-count">🔥 <strong>4</strong> day streak</span></div>
+          </div>
+          <div class="streak-days" id="streakDays">
+            <div class="streak-day done"><span class="dlabel">Mon</span><div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+            <div class="streak-day done"><span class="dlabel">Tue</span><div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+            <div class="streak-day done"><span class="dlabel">Wed</span><div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+            <div class="streak-day done"><span class="dlabel">Thu</span><div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+            <div class="streak-day today" id="todayDot"><span class="dlabel">Fri</span><div class="dot"></div></div>
+            <div class="streak-day future"><span class="dlabel">Sat</span><div class="dot"></div></div>
+            <div class="streak-day future"><span class="dlabel">Sun</span><div class="dot"></div></div>
+          </div>
+          <button class="btn-primary streak-mark-btn" id="streakMarkBtn" onclick="markTodayDone()">Mark today done</button>
+          <p class="streak-caption">We'll also detect check-ins from WhatsApp replies.</p>
+        </div>
+
+        <div class="goal-grid">
+          <div class="goal-card primary">
+            <p class="badge">Primary</p>
+            <div style="flex:1; min-width:0;">
+              <p class="goal-text">Run a half marathon by October <span style="opacity:0.45; font-family:var(--font-sans); font-size:0.78rem; font-weight:600;">· Mid-term</span></p>
+              <div class="goal-progress">
+                <div class="progress-track"><div class="progress-fill" style="width:61%;"></div></div>
+                <span class="progress-label">18 of 30 training runs · 61%</span>
+              </div>
+            </div>
+            <p class="goal-meta">Drives your daily nudge</p>
+          </div>
+
+          <div class="goal-card empty" onclick="openGoalModal('long_term')">
+            <div class="plus">+</div>
+            <div class="add-label">Add a long-term goal</div>
+            <div class="add-sub">e.g. a 1–5 year ambition</div>
+          </div>
+
+          <div class="goal-card empty" onclick="openGoalModal('short_term')">
+            <div class="plus">+</div>
+            <div class="add-label">Add a short-term goal</div>
+            <div class="add-sub">e.g. something for this month</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== WINS ========== -->
+      <section class="section" data-section="wins">
+        <div class="section-eyebrow">
+          <span class="eyebrow-text">Wins</span>
+          <span class="rule"></span>
+        </div>
+        <div class="page-head" style="align-items:center;">
+          <div>
+            <h1>Recent wins <span style="font-family:var(--font-sans); font-size:0.95rem; font-weight:600; opacity:0.45;">(3)</span></h1>
+            <p>Every win you log can show up in a future nudge.</p>
+          </div>
+          <button class="btn-primary" onclick="openWinModal()">+ Log a win</button>
+        </div>
+
+        <div id="winsList">
+          <div class="win-row">
+            <div class="win-icon emoji">🏃</div>
+            <div class="win-text">
+              <div class="win-title">Went for a 5k run</div>
+              <div class="win-sub"><span class="win-goal-tag">Half Marathon</span><span class="win-date">Yesterday</span></div>
+            </div>
+          </div>
+          <div class="win-row">
+            <div class="win-icon emoji">📖</div>
+            <div class="win-text">
+              <div class="win-title">Read 10 pages before bed</div>
+              <div class="win-sub"><span class="win-goal-tag">Half Marathon</span><span class="win-date">2 days ago</span></div>
+            </div>
+          </div>
+          <div class="win-row">
+            <div class="win-icon emoji">🥗</div>
+            <div class="win-text">
+              <div class="win-title">Meal prepped for the week</div>
+              <div class="win-sub"><span class="win-goal-tag">Half Marathon</span><span class="win-date">This week</span></div>
+            </div>
+          </div>
+        </div>
+        <a href="#" class="see-all-link" onclick="return false;">See all wins →</a>
+      </section>
+
+      <!-- ========== PROFILE ========== -->
+      <section class="section" data-section="profile">
+        <div class="section-eyebrow">
+          <span class="eyebrow-text">Profile</span>
+          <span class="rule"></span>
+        </div>
+        <div class="page-head">
+          <div>
+            <h1>Profile</h1>
+            <p>Your account details and delivery preference.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Account details</h2>
+            <button class="btn-secondary edit-btn" id="profileEditBtn" onclick="toggleProfileEdit()">Edit</button>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="pName">Full name</label>
+              <input type="text" id="pName" value="Shruthi" disabled>
+            </div>
+            <div class="field">
+              <label for="pEmail">Email</label>
+              <input type="email" id="pEmail" value="shruthi@example.com" disabled>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="pPhone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px; height:13px; vertical-align:-2px; margin-right:0.3rem;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                WhatsApp number
+              </label>
+              <input type="text" id="pPhone" value="+91 98765 43210" disabled>
+            </div>
+            <div class="field">
+              <label for="pTime">Delivery time</label>
+              <div class="time-display" id="pTimeDisplay">Daily at 8:00 AM</div>
+              <input type="time" id="pTime" value="08:00" disabled style="display:none;">
+            </div>
+          </div>
+
+          <div class="edit-actions" id="profileEditActions" style="display:none;">
+            <button class="btn-primary" onclick="saveProfile()">Save changes</button>
+            <button class="btn-secondary" onclick="toggleProfileEdit()">Cancel</button>
+          </div>
+        </div>
+
+        <div class="panel delivery-panel">
+          <div class="panel-head">
+            <h2>Delivery</h2>
+          </div>
+          <div class="delivery-row">
+            <span class="delivery-dot"></span>
+            <span>WhatsApp connected</span>
+          </div>
+          <div class="delivery-row muted">
+            <span>Last delivered</span>
+            <span>Today at 8:00 AM</span>
+          </div>
+          <button class="delivery-link" onclick="enterProfileEdit()">Change delivery time</button>
+        </div>
+      </section>
+
+      <!-- ========== SETTINGS ========== -->
+      <section class="section" data-section="settings">
+        <div class="section-eyebrow">
+          <span class="eyebrow-text">Settings</span>
+          <span class="rule"></span>
+        </div>
+        <div class="page-head">
+          <div>
+            <h1>Settings</h1>
+            <p>Account-level controls.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="settings-row">
+            <div>
+              <div class="label">Log out</div>
+              <div class="desc">Sign out of Nudge on this device</div>
+            </div>
+            <button class="btn-secondary" onclick="alert('Visual only — log out isn\'t wired yet.')">Log out</button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="label danger-text">Delete account</div>
+              <div class="desc">Permanently remove your goals, wins, and nudge history</div>
+            </div>
+            <button class="btn-secondary delete-btn" onclick="openDeleteModal()">Delete account</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ---------- Bottom nav (mobile) ---------- -->
+  <nav class="bottom-nav">
+    <button class="bottom-nav-item active" data-section="goals" onclick="switchSection('goals')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+      <span class="bn-label">Goals</span>
+    </button>
+    <button class="bottom-nav-item" data-section="wins" onclick="switchSection('wins')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a1 1 0 0 0-1 1 5 5 0 0 0 4 4.9M17 5h3a1 1 0 0 1 1 1 5 5 0 0 1-4 4.9"/></svg>
+      <span class="bn-label">Wins</span>
+    </button>
+    <button class="bottom-nav-item" data-section="profile" onclick="switchSection('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="bn-label">Profile</span>
+    </button>
+    <button class="bottom-nav-item" data-section="settings" onclick="switchSection('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="bn-label">Settings</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ---------- Add goal modal ---------- -->
+<div class="modal-overlay" id="goalModalOverlay">
+  <div class="modal">
+    <h2 id="goalModalTitle">Add a goal</h2>
+    <div class="field">
+      <label for="goalModalText">Describe your goal</label>
+      <textarea id="goalModalText" maxlength="200" placeholder="e.g. Read 12 books this year"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeGoalModal()">Save goal</button>
+      <button class="btn-secondary" onclick="closeGoalModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- Log win modal ---------- -->
+<div class="modal-overlay" id="winModalOverlay">
+  <div class="modal">
+    <h2>Log a win</h2>
+    <div class="field">
+      <label for="winModalGoal">Which goal is this for?</label>
+      <select id="winModalGoal">
+        <option value="midterm" selected>Run a half marathon by October (Primary)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="winModalText">What happened?</label>
+      <textarea id="winModalText" maxlength="200" placeholder="e.g. Finished a 10k training run"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveWin()">Save win</button>
+      <button class="btn-secondary" onclick="closeWinModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- Delete account modal ---------- -->
+<div class="modal-overlay" id="deleteModalOverlay">
+  <div class="modal">
+    <h2>Delete your account?</h2>
+    <p style="font-size:0.88rem; opacity:0.65; margin:-0.5rem 0 0;">This permanently removes your goals, wins, and nudge history. This can't be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeDeleteModal()">Keep my account</button>
+      <button class="btn-primary" style="background:#B3432B;" onclick="closeDeleteModal()">Delete account</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">+1 Win 🎉</div>
+
+<script>
+  // Visual only — no real API calls wired yet. All actions below are placeholders.
+
+  function toggleAvatarMenu(id){
+    var menu = document.getElementById(id);
+    var isOpen = menu.classList.contains('open');
+    closeAvatarMenus();
+    if (!isOpen) menu.classList.add('open');
+  }
+  function closeAvatarMenus(){
+    document.querySelectorAll('.avatar-menu').forEach(function(m){ m.classList.remove('open'); });
+  }
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('.avatar-menu-wrap')) closeAvatarMenus();
+  });
+
+  function goHome(e){
+    e.preventDefault();
+    switchSection('goals');
+  }
+
+  function switchSection(name){
+    document.querySelectorAll('.section').forEach(function(el){
+      el.classList.toggle('active', el.dataset.section === name);
+    });
+    document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(function(el){
+      el.classList.toggle('active', el.dataset.section === name);
+    });
+    document.getElementById('nudgeHero').classList.toggle('compact', name !== 'goals');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function markTodayDone(){
+    var todayDot = document.getElementById('todayDot');
+    var countEl = document.querySelector('.streak-count strong');
+    var btn = document.getElementById('streakMarkBtn');
+    var isDone = todayDot.classList.contains('done');
+
+    if (!isDone){
+      todayDot.classList.remove('today');
+      todayDot.classList.add('done');
+      todayDot.querySelector('.dot').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      countEl.textContent = (parseInt(countEl.textContent, 10) + 1) + '';
+      btn.textContent = "Undo check-in";
+    } else {
+      todayDot.classList.remove('done');
+      todayDot.classList.add('today');
+      todayDot.querySelector('.dot').innerHTML = '';
+      countEl.textContent = (parseInt(countEl.textContent, 10) - 1) + '';
+      btn.textContent = 'Mark today done';
+    }
+  }
+
+  function toggleNudgeStrip(){
+    var bg = document.getElementById('nudgeHeroBg');
+    var hintText = document.getElementById('nudgeHintText');
+    bg.classList.toggle('collapsed');
+    hintText.textContent = bg.classList.contains('collapsed') ? "Read today's nudge" : 'Collapse message';
+  }
+
+  function openGoalModal(timeframe){
+    var titleMap = { long_term: 'Add a long-term goal', short_term: 'Add a short-term goal' };
+    document.getElementById('goalModalTitle').textContent = titleMap[timeframe] || 'Add a goal';
+    document.getElementById('goalModalOverlay').classList.add('open');
+  }
+  function closeGoalModal(){
+    document.getElementById('goalModalOverlay').classList.remove('open');
+    document.getElementById('goalModalText').value = '';
+  }
+
+  function openWinModal(){
+    document.getElementById('winModalOverlay').classList.add('open');
+  }
+  function saveWin(){
+    closeWinModal();
+    var toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(function(){ toast.classList.remove('show'); }, 2200);
+  }
+
+  function closeWinModal(){
+    document.getElementById('winModalOverlay').classList.remove('open');
+    document.getElementById('winModalText').value = '';
+  }
+
+  function openDeleteModal(){
+    document.getElementById('deleteModalOverlay').classList.add('open');
+  }
+  function closeDeleteModal(){
+    document.getElementById('deleteModalOverlay').classList.remove('open');
+  }
+
+  function toggleProfileEdit(){
+    var disabled = document.getElementById('pName').disabled;
+    ['pName','pEmail','pPhone','pTime'].forEach(function(id){
+      document.getElementById(id).disabled = !disabled;
+    });
+    document.getElementById('profileEditActions').style.display = disabled ? 'flex' : 'none';
+    document.getElementById('profileEditBtn').style.display = disabled ? 'none' : 'inline-block';
+    document.getElementById('pTime').style.display = disabled ? 'block' : 'none';
+    document.getElementById('pTimeDisplay').style.display = disabled ? 'none' : 'block';
+  }
+  function enterProfileEdit(){
+    if (document.getElementById('pName').disabled) toggleProfileEdit();
+    document.getElementById('pTime').focus();
+  }
+  function saveProfile(){
+    var t = document.getElementById('pTime').value || '08:00';
+    var hour = parseInt(t.split(':')[0], 10);
+    var min = t.split(':')[1];
+    var period = hour >= 12 ? 'PM' : 'AM';
+    var displayHour = hour % 12; if (displayHour === 0) displayHour = 12;
+    document.getElementById('pTimeDisplay').textContent = 'Daily at ' + displayHour + ':' + min + ' ' + period;
+    toggleProfileEdit();
+  }
+</script>
+
+</body>
+</html>

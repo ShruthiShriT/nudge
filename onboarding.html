@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Get started — Nudge</title>
+<meta name="theme-color" content="#F5F1FF">
+<style>
+  :root{
+    --bg: #F5F1FF;
+    --accent: #A78BFA;
+    --ink: #111111;
+    --font-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  a{ color: inherit; text-decoration: none; }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .page{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    width: 100%;
+  }
+
+  /* ---------- Nav ---------- */
+  nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 1.75rem 0 0;
+  }
+
+  .logo{
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .logo .dark{ color: var(--ink); }
+  .logo .accent{ color: var(--accent); }
+
+  .step-counter{
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    opacity: 0.45;
+  }
+
+  main{
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(2rem, 8vw, 3.5rem) 0;
+  }
+
+  /* ---------- Progress dots ---------- */
+  .progress{
+    display: flex;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-bottom: 1.75rem;
+  }
+  .progress .dot{
+    width: 24px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--ink);
+    opacity: 0.12;
+    transition: opacity 0.18s ease, background 0.18s ease;
+  }
+  .progress .dot.active{
+    background: var(--accent);
+    opacity: 1;
+  }
+  .progress .dot.done{
+    background: var(--ink);
+    opacity: 0.45;
+  }
+
+  .flow-wrap{
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .auth-card{
+    width: 100%;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: clamp(2rem, 6vw, 2.5rem) clamp(1.75rem, 6vw, 2.25rem) 2rem;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+  }
+
+  .step{ display: none; }
+  .step.active{
+    display: block;
+    animation: fadeUp 0.32s ease both;
+  }
+
+  @keyframes fadeUp{
+    0%{ opacity: 0; transform: translateY(8px); }
+    100%{ opacity: 1; transform: translateY(0); }
+  }
+
+  .auth-head{
+    margin-bottom: 1.75rem;
+  }
+  .auth-head.center{ text-align: center; }
+
+  .eyebrow{
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 1;
+    margin: 0 0 0.6rem;
+  }
+
+  .auth-head h1{
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 1.55rem;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.01em;
+  }
+
+  .auth-head p{
+    font-size: 0.85rem;
+    color: var(--ink);
+    opacity: 0.65;
+    margin: 0;
+  }
+
+  form{ display:flex; flex-direction:column; }
+
+  .field{
+    margin-bottom: 1.1rem;
+  }
+
+  .field label{
+    display:block;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--ink);
+    opacity: 0.65;
+    margin-bottom: 0.5rem;
+  }
+
+  .field input,
+  .field select,
+  .field textarea{
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    color: #000000;
+    background: #ffffff;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    outline: none;
+    transition: border-color 0.18s ease;
+  }
+
+  .field select{
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23111111' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    padding-right: 2.2rem;
+  }
+
+  .field textarea{
+    resize: vertical;
+    min-height: 96px;
+    line-height: 1.5;
+  }
+
+  .field input::placeholder,
+  .field textarea::placeholder{
+    color: var(--ink);
+    opacity: 0.45;
+  }
+
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus{
+    border-color: var(--accent);
+  }
+
+  .char-count{
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--ink);
+    opacity: 0.45;
+    margin-top: 0.35rem;
+  }
+
+  .btn-primary{
+    width: 100%;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.1s ease;
+    margin-top: 0.25rem;
+  }
+  .btn-primary:hover{ background: #2b2b2b; }
+  .btn-primary:active{ transform: scale(0.98); }
+
+  .btn-secondary{
+    width: 100%;
+    background: none;
+    color: var(--ink);
+    opacity: 0.65;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.7rem;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.18s ease, transform 0.1s ease;
+    margin-top: 0.5rem;
+  }
+  .btn-secondary:hover{ opacity: 1; }
+  .btn-secondary:active{ transform: scale(0.98); }
+
+  footer{
+    text-align:center;
+    padding: 0 0 2rem;
+    font-size: 0.78rem;
+    opacity: 0.45;
+  }
+
+  /* ---------- Nudge preview ---------- */
+  .phone-frame{
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .bubble{
+    background: #ffffff;
+    border-radius: 12px;
+    border-top-left-radius: 4px;
+    padding: 0.95rem 1.05rem;
+    box-shadow: 0 8px 20px -12px rgba(17,17,17,0.18);
+  }
+  .bubble .line{
+    font-size: 0.88rem;
+    color: var(--ink);
+    margin: 0 0 0.6rem;
+  }
+  .bubble .line:last-child{ margin-bottom: 0; }
+  .bubble .greet{ font-weight: 700; }
+  .bubble .muted{ opacity: 0.65; }
+  .bubble .accent-line{ color: var(--accent); font-weight: 600; }
+  .bubble .timestamp{
+    text-align: right;
+    font-size: 0.7rem;
+    opacity: 0.45;
+    margin-top: 0.5rem;
+  }
+
+  .success-state{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <nav>
+    <a class="logo" href="/"><span class="dark">Nudg</span><span class="accent">e</span></a>
+    <a class="nav-link" href="/dashboard" id="skipLink">Skip for now</a>
+  </nav>
+</div>
+
+<main>
+  <div class="flow-wrap">
+
+    <div class="progress" id="progressDots">
+      <div class="dot active" data-step="1"></div>
+      <div class="dot" data-step="2"></div>
+      <div class="dot" data-step="3"></div>
+    </div>
+
+    <div class="auth-card">
+
+      <!-- STEP 1: Add goal (with welcome) -->
+      <section class="step active" data-step="1">
+        <div class="auth-head">
+          <p class="eyebrow">Step 1</p>
+          <h1 id="welcomeHeading">Welcome! What are you working toward?</h1>
+          <p>This shapes every nudge you'll get — what it says, and when it arrives.</p>
+        </div>
+
+        <form onsubmit="return false;">
+          <div class="field">
+            <label for="goalType">Goal type</label>
+            <select id="goalType" name="goalType" required>
+              <option value="" disabled selected>Select a timeframe</option>
+              <option value="long_term">Long-term</option>
+              <option value="mid_term">Mid-term</option>
+              <option value="short_term">Short-term</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="goalDescription">Describe your goal</label>
+            <textarea id="goalDescription" name="goalDescription" placeholder="e.g. Run a half marathon by October" maxlength="200" oninput="updateCharCount('goalDescription','goalCharCount')" required></textarea>
+            <div class="char-count" id="goalCharCount">0 / 200</div>
+          </div>
+
+          <div class="field">
+            <label for="deliveryTime">When should we send your nudge?</label>
+            <input type="time" id="deliveryTime" name="deliveryTime" value="08:00" required>
+          </div>
+
+          <button type="submit" class="btn-primary" onclick="validateAndGo(1,2,event)">Continue</button>
+        </form>
+      </section>
+
+      <!-- STEP 2: Add win -->
+      <section class="step" data-step="2">
+        <div class="auth-head">
+          <p class="eyebrow">Step 2</p>
+          <h1>Tell us a recent win</h1>
+          <p>Big or small — we'll use it to remind you what you're capable of.</p>
+        </div>
+
+        <form onsubmit="return false;">
+          <div class="field">
+            <label for="winDescription">Describe your win</label>
+            <textarea id="winDescription" name="winDescription" placeholder="e.g. Went for a 5k run this morning" maxlength="200" oninput="updateCharCount('winDescription','winCharCount')" required></textarea>
+            <div class="char-count" id="winCharCount">0 / 200</div>
+          </div>
+
+          <button type="submit" class="btn-primary" onclick="validateAndGo(2,3,event)">See my first nudge</button>
+          <button type="button" class="btn-secondary" onclick="goToStep(1)">Back</button>
+        </form>
+      </section>
+
+      <!-- STEP 3: Nudge preview -->
+      <section class="step" data-step="3">
+        <div class="auth-head center">
+          <p class="eyebrow">Your first nudge</p>
+          <h1>A little taste of what's ahead</h1>
+          <p id="previewSubtitle">This is the kind of message you'll get every day.</p>
+        </div>
+
+        <div class="phone-frame">
+          <div class="bubble">
+            <p class="line greet" id="nudgeGreeting">Good morning!</p>
+            <p class="line muted" id="nudgeGoal">You're working toward running a half marathon by October — every week of training gets you closer.</p>
+            <p class="line accent-line" id="nudgeWin">Remember that 5k run this morning? That's proof you can show up, even on hard days.</p>
+            <p class="line muted" id="nudgeAction">Today: take one small step toward this. No pressure — just progress.</p>
+            <p class="line" id="nudgeClosing">You've got this. One nudge at a time.</p>
+            <p class="timestamp" id="nudgeTimestamp">8:00 AM · WhatsApp</p>
+          </div>
+        </div>
+        <p style="font-size:0.78rem; opacity:0.45; text-align:center; margin:-0.75rem 0 1.25rem;">Preview only — real nudges are generated fresh by AI every day.</p>
+
+        <button type="button" class="btn-primary" onclick="window.location.href='/dashboard'">Take me to my dashboard</button>
+        <button type="button" class="btn-secondary" onclick="goToStep(2)">Back</button>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  Nudge by Addicoot · Built solo · © 2026
+</footer>
+
+<script>
+  // Visual only — no real API calls wired yet. State is held in memory for the preview screen.
+  var totalSteps = 3;
+
+  function goToStep(step){
+    document.querySelectorAll('.step').forEach(function(el){
+      el.classList.toggle('active', parseInt(el.dataset.step) === step);
+    });
+    document.querySelectorAll('.progress .dot').forEach(function(dot){
+      var d = parseInt(dot.dataset.step);
+      dot.classList.remove('active','done');
+      if (d === step) dot.classList.add('active');
+      else if (d < step) dot.classList.add('done');
+    });
+    document.getElementById('skipLink').style.display = (step === totalSteps) ? 'none' : 'inline';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (step === 3) buildNudgePreview();
+  }
+
+  function validateAndGo(fromStep, toStep, e){
+    e.preventDefault();
+    var form = document.querySelectorAll('.step[data-step="' + fromStep + '"] form')[0];
+    if (!form.checkValidity()){
+      form.reportValidity();
+      return;
+    }
+    goToStep(toStep);
+  }
+
+  function updateCharCount(fieldId, countId){
+    var field = document.getElementById(fieldId);
+    var count = document.getElementById(countId);
+    count.textContent = field.value.length + ' / 200';
+  }
+
+  // TODO: replace this placeholder builder with a live call to GET /nudge/{email}
+  // once the Gemini-powered nudge endpoint is wired up. Right now this just
+  // templates the user's own goal/win text locally — no AI involved yet.
+  function buildNudgePreview(){
+    var goal = document.getElementById('goalDescription').value.trim();
+    var win = document.getElementById('winDescription').value.trim();
+    var time = document.getElementById('deliveryTime').value || '08:00';
+
+    document.getElementById('nudgeGreeting').textContent = greetingForTime(time);
+    document.getElementById('nudgeTimestamp').textContent = formatTime(time) + ' · WhatsApp';
+    document.getElementById('previewSubtitle').textContent = "This is the kind of message you'll get every day at " + formatTime(time) + ".";
+
+    document.getElementById('nudgeGoal').textContent = goal
+      ? "You're working toward " + lowerFirst(goal) + " — every step counts."
+      : "You're working toward something meaningful — every step counts.";
+
+    document.getElementById('nudgeWin').textContent = win
+      ? "Remember " + lowerFirst(win) + "? That's proof you can show up."
+      : "Remember your last win? That's proof you can show up.";
+  }
+
+  function greetingForTime(time){
+    var hour = parseInt(time.split(':')[0], 10);
+    if (hour < 12) return 'Good morning!';
+    if (hour < 17) return 'Good afternoon!';
+    return 'Good evening!';
+  }
+
+  function formatTime(time){
+    var parts = time.split(':');
+    var hour = parseInt(parts[0], 10);
+    var min = parts[1];
+    var period = hour >= 12 ? 'PM' : 'AM';
+    var displayHour = hour % 12;
+    if (displayHour === 0) displayHour = 12;
+    return displayHour + ':' + min + ' ' + period;
+  }
+
+  function lowerFirst(str){
+    if (!str) return str;
+    return str.charAt(0).toLowerCase() + str.slice(1);
+  }
+
+  // Personalize heading if a name was passed via query param (?name=...)
+  (function(){
+    var params = new URLSearchParams(window.location.search);
+    var name = params.get('name');
+    if (name){
+      document.getElementById('welcomeHeading').textContent = 'Welcome, ' + name + '! What are you working toward?';
+    }
+  })();
+</script>
+
+</body>
+</html>

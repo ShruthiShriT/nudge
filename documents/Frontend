@@ -1,0 +1,23 @@
+Here's the full list of things still open or flagged for this page, in one place:
+Needs a decision / not yet built
+
+Delivery-time field on the backend — confirm whether POST /users or POST /goals already has this implemented, or if it's planned but not live yet. Affects what /start needs to send.
+
+Flagged for a future pass, not urgent
+
+Closing line "Consistency compounds." — solid, locked for now, but not a fully unique phrase. Worth a second look during a dedicated copywriting pass later, not before.
+Proof/social signal (not testimonials) — once you have a real, meaningful user number, consider a quiet stat line instead of quote cards, to preserve the page's restraint. Nothing to do now; revisit once the number exists.
+
+Confirmed fine, no action needed
+
+Phone demo's 8:00 AM timestamp — just a sample message timestamp, not a delivery-time promise. Fine to leave since delivery time is already user-configurable.
+
+Locked, not open for relitigating
+
+Nav, hero, phone animation, CTA, closing section layout, spacing, footer — all done.
+
+Next real step (separate thread)
+
+Build /start: signup → goal → win → nudge, wired to the four live endpoints.
+
+That's everythi

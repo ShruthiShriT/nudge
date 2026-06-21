@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign up — Nudge</title>
+<meta name="theme-color" content="#F5F1FF">
+<style>
+  :root{
+    --bg: #F5F1FF;
+    --accent: #A78BFA;
+    --ink: #111111;
+    --font-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  a{ color: inherit; text-decoration: none; }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .page{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    width: 100%;
+  }
+
+  /* ---------- Nav ---------- */
+  nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 1.75rem 0 0;
+  }
+
+  .logo{
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .logo .dark{ color: var(--ink); }
+  .logo .accent{ color: var(--accent); }
+
+  .nav-link{
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    opacity: 0.65;
+    transition: opacity 0.18s ease;
+  }
+  .nav-link:hover{ opacity: 1; }
+
+  main{
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(2.5rem, 8vw, 4rem) 0;
+  }
+
+  .auth-card{
+    width: 100%;
+    max-width: 380px;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: clamp(2rem, 6vw, 2.5rem) clamp(1.75rem, 6vw, 2.25rem) 2rem;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+  }
+
+  .auth-head{
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .auth-head h1{
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 1.55rem;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.01em;
+  }
+
+  .auth-head p{
+    font-size: 0.85rem;
+    color: var(--ink);
+    opacity: 0.65;
+    margin: 0;
+  }
+
+  form{ display:flex; flex-direction:column; }
+
+  .field{
+    margin-bottom: 1.1rem;
+  }
+
+  .field label{
+    display:block;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--ink);
+    opacity: 0.65;
+    margin-bottom: 0.5rem;
+  }
+
+  .field input{
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    color: #000000;
+    background: #ffffff;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    outline: none;
+    transition: border-color 0.18s ease;
+  }
+
+  .field input[type="date"]{
+    color-scheme: light;
+  }
+
+  .field input::placeholder{
+    color: var(--ink);
+    opacity: 0.45;
+  }
+
+  .field input:focus{
+    border-color: var(--accent);
+  }
+
+  .phone-row{
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .country-select{
+    flex: 0 0 auto;
+    width: 6rem;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    color: #000000;
+    background: #ffffff;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    padding: 0.75rem 0.5rem;
+    outline: none;
+    transition: border-color 0.18s ease;
+    cursor: pointer;
+  }
+  .country-select:focus{
+    border-color: var(--accent);
+  }
+
+  .phone-row input{
+    flex: 1;
+  }
+
+  .password-wrap{
+    position: relative;
+  }
+
+  .password-wrap input{
+    padding-right: 2.6rem;
+  }
+
+  .toggle-visibility{
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.65;
+    transition: opacity 0.18s ease;
+  }
+  .toggle-visibility:hover{ opacity: 1; }
+  .toggle-visibility svg{ width: 14px; height: 14px; display:block; }
+
+  .btn-primary{
+    width: 100%;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.1s ease;
+    margin-top: 0.25rem;
+  }
+  .btn-primary:hover{ background: #2b2b2b; }
+  .btn-primary:active{ transform: scale(0.98); }
+
+  .switch-line{
+    text-align: center;
+    margin-top: 1.6rem;
+    font-size: 0.85rem;
+    color: var(--ink);
+    opacity: 0.65;
+  }
+
+  .switch-line a{
+    font-weight: 700;
+    opacity: 1;
+    color: var(--accent);
+  }
+  .switch-line a:hover{ text-decoration: underline; }
+
+  footer{
+    text-align:center;
+    padding: 0 0 2rem;
+    font-size: 0.78rem;
+    opacity: 0.45;
+  }
+
+  /* ---------- Success state (full page, no card) ---------- */
+  .success-state{
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex: 1;
+    padding: 2rem 1.5rem;
+  }
+  .success-state.show{ display: flex; }
+
+  .success-state h2{
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(2rem, 7vw, 3rem);
+    line-height: 1.2;
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.01em;
+    opacity: 0;
+    animation: fadeUp 0.4s ease 0.1s forwards;
+  }
+
+  .success-state p{
+    font-size: 1.05rem;
+    color: var(--ink);
+    opacity: 0;
+    margin: 0 0 2rem;
+    max-width: 380px;
+    animation: fadeUpSecondary 0.4s ease 0.22s forwards;
+  }
+
+  .success-state .btn-primary{
+    width: auto;
+    padding: 0.85rem 2.4rem;
+    opacity: 0;
+    animation: fadeUp 0.4s ease 0.38s forwards;
+  }
+
+  @keyframes fadeUp{
+    0%{ opacity: 0; transform: translateY(6px); }
+    100%{ opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUpSecondary{
+    0%{ opacity: 0; transform: translateY(6px); }
+    100%{ opacity: 0.65; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .success-state h2, .success-state p, .success-state .btn-primary{
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .success-state p{ opacity: 0.65 !important; }
+  }
+
+  /* ---------- Full-screen confetti overlay ---------- */
+  .confetti-overlay{
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 50;
+  }
+
+  .confetti-piece{
+    position: absolute;
+    top: -20px;
+    width: 8px;
+    height: 8px;
+    opacity: 0.95;
+    animation: confettiFall linear forwards;
+  }
+
+  @keyframes confettiFall{
+    0%{ transform: translateY(0) rotate(0deg); opacity: 0.95; }
+    85%{ opacity: 0.9; }
+    100%{ transform: translateY(105vh) rotate(320deg); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .confetti-overlay{ display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <nav>
+    <a class="logo" href="/"><span class="dark">Nudg</span><span class="accent">e</span></a>
+    <a class="nav-link" href="/">← Back</a>
+  </nav>
+</div>
+
+<div class="confetti-overlay" id="confettiOverlay"></div>
+
+<main>
+  <div class="auth-card">
+    <div class="auth-head">
+      <h1>Create your account</h1>
+    </div>
+
+    <form onsubmit="return false;">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email" required>
+      </div>
+
+      <div class="field">
+        <label for="phone">WhatsApp number</label>
+        <div class="phone-row">
+          <select id="countryCode" name="countryCode" class="country-select" required>
+            <option value="+91" selected>🇮🇳 +91</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+61">🇦🇺 +61</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+65">🇸🇬 +65</option>
+          </select>
+          <input type="tel" id="phone" name="phone" placeholder="98765 43210" autocomplete="tel" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="name">Your name</label>
+        <input type="text" id="name" name="name" placeholder="What should we call you?" autocomplete="name" required>
+      </div>
+
+      <div class="field">
+        <label for="dob">Date of birth</label>
+        <input type="date" id="dob" name="dob" autocomplete="bday" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" minlength="8" required>
+          <button type="button" class="toggle-visibility" id="toggleVisibility" aria-label="Show password" aria-pressed="false">
+            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" onclick="showSuccess(event)">Create account</button>
+    </form>
+
+    <p class="switch-line" id="switchLine">Already have an account? <a href="/signin">Sign in</a></p>
+  </div>
+</main>
+
+<section class="success-state" id="successState">
+  <h2 id="successHeading">Welcome to Nudge!</h2>
+  <p>Your account is ready. Let's set up your first goal.</p>
+  <button type="button" class="btn-primary" onclick="window.location.href='/onboarding'">Continue</button>
+</section>
+
+<footer>
+  Nudge by Addicoot · Built solo · © 2026
+</footer>
+
+<script>
+  // Visual only — no real account creation wired yet. Simulates the success moment.
+  function showSuccess(e){
+    e.preventDefault();
+    var form = document.querySelector('form');
+
+    if (!form.checkValidity()){
+      form.reportValidity();
+      return;
+    }
+
+    var mainEl = document.querySelector('main');
+    var successState = document.getElementById('successState');
+    var heading = document.getElementById('successHeading');
+
+    var name = document.getElementById('name').value.trim();
+    heading.textContent = name ? 'Welcome to Nudge, ' + name + '!' : 'Welcome to Nudge!';
+
+    mainEl.style.display = 'none';
+    successState.classList.add('show');
+    successState.setAttribute('tabindex', '-1');
+    successState.focus();
+
+    launchConfetti();
+  }
+
+  function launchConfetti(){
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var overlay = document.getElementById('confettiOverlay');
+    var colors = ['#A78BFA', '#111111', '#C4B5FD', '#7C5CE0'];
+    var count = 60;
+
+    for (var i = 0; i < count; i++){
+      var piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = (Math.random() * 100) + 'vw';
+      piece.style.background = colors[i % colors.length];
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      piece.style.width = piece.style.height = (5 + Math.random() * 5) + 'px';
+      piece.style.animationDelay = (Math.random() * 0.6) + 's';
+      piece.style.animationDuration = (1.8 + Math.random() * 1.2) + 's';
+      overlay.appendChild(piece);
+    }
+
+    setTimeout(function(){ overlay.innerHTML = ''; }, 3500);
+  }
+
+  (function(){
+    var btn = document.getElementById('toggleVisibility');
+    var input = document.getElementById('password');
+    var eye = document.getElementById('eyeIcon');
+
+    var eyeOpen = '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle>';
+    var eyeClosed = '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a18.6 18.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+
+    btn.addEventListener('click', function(){
+      var showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      eye.innerHTML = showing ? eyeOpen : eyeClosed;
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+    });
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign in — Nudge</title>
+<meta name="theme-color" content="#F5F1FF">
+<style>
+  :root{
+    --bg: #F5F1FF;
+    --accent: #A78BFA;
+    --ink: #111111;
+    --font-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  a{ color: inherit; text-decoration: none; }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .page{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    width: 100%;
+  }
+
+  /* ---------- Nav ---------- */
+  nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 1.75rem 0 0;
+  }
+
+  .logo{
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .logo .dark{ color: var(--ink); }
+  .logo .accent{ color: var(--accent); }
+
+  .nav-link{
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    opacity: 0.65;
+    transition: opacity 0.18s ease;
+  }
+  .nav-link:hover{ opacity: 1; }
+
+  /* ---------- Centered card area ---------- */
+  main{
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(2.5rem, 8vw, 4rem) 0;
+  }
+
+  .auth-card{
+    width: 100%;
+    max-width: 380px;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: clamp(2rem, 6vw, 2.5rem) clamp(1.75rem, 6vw, 2.25rem) 2rem;
+    box-shadow: 0 30px 60px -25px rgba(17,17,17,0.12);
+  }
+
+  .auth-head{
+    text-align: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .auth-head h1{
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 1.55rem;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.01em;
+  }
+
+  .auth-head p{
+    font-size: 0.85rem;
+    color: var(--ink);
+    opacity: 0.65;
+    margin: 0;
+  }
+
+  /* ---------- Form ---------- */
+  form{ display:flex; flex-direction:column; }
+
+  .field{
+    margin-bottom: 1.1rem;
+  }
+
+  .field label{
+    display:block;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--ink);
+    opacity: 0.65;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .field input{
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    color: #000000;
+    background: #ffffff;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    outline: none;
+    transition: border-color 0.18s ease;
+  }
+
+  .field input::placeholder{
+    color: var(--ink);
+    opacity: 0.45;
+  }
+
+  .field input:focus{
+    border-color: var(--accent);
+  }
+
+  .password-wrap{
+    position: relative;
+  }
+
+  .password-wrap input{
+    padding-right: 2.6rem;
+  }
+
+  .toggle-visibility{
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.65;
+    transition: opacity 0.18s ease;
+  }
+  .toggle-visibility:hover{ opacity: 1; }
+  .toggle-visibility svg{ width: 14px; height: 14px; display:block; }
+
+  .field-row{
+    display:flex;
+    justify-content: flex-end;
+    margin: -0.5rem 0 1.4rem;
+  }
+
+  .forgot-link{
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--ink);
+    opacity: 0.65;
+    transition: opacity 0.18s ease;
+  }
+  .forgot-link:hover{ opacity: 1; }
+
+  .btn-primary{
+    width: 100%;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.1s ease;
+  }
+  .btn-primary:hover{ background: #2b2b2b; }
+  .btn-primary:active{ transform: scale(0.98); }
+
+  .divider{
+    display:flex;
+    align-items:center;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  .divider::before,
+  .divider::after{
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--ink);
+    opacity: 0.1;
+  }
+  .divider span{
+    font-size: 0.72rem;
+    color: var(--ink);
+    opacity: 0.45;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .btn-secondary{
+    width: 100%;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.8rem;
+    border: 1.5px solid rgba(17,17,17,0.12);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.1s ease;
+  }
+  .btn-secondary:hover{
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+  }
+  .btn-secondary:active{
+    background: #7C5CE0;
+    border-color: #7C5CE0;
+    color: #ffffff;
+    transform: scale(0.98);
+  }
+
+  .switch-line{
+    text-align: center;
+    margin-top: 1.6rem;
+    font-size: 0.85rem;
+    color: var(--ink);
+    opacity: 0.65;
+  }
+
+  .switch-line a{
+    font-weight: 700;
+    opacity: 1;
+    color: var(--accent);
+  }
+  .switch-line a:hover{ text-decoration: underline; }
+
+  footer{
+    text-align:center;
+    padding: 0 0 2rem;
+    font-size: 0.78rem;
+    opacity: 0.45;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <nav>
+    <a class="logo" href="/"><span class="dark">Nudg</span><span class="accent">e</span></a>
+    <a class="nav-link" href="/">← Back</a>
+  </nav>
+</div>
+
+<main>
+  <div class="auth-card">
+    <div class="auth-head">
+      <h1>Welcome back</h1>
+      <p>Sign in to keep your streak going.</p>
+    </div>
+
+    <form onsubmit="return false;">
+      <div class="field">
+        <label for="identifier">Email or phone number</label>
+        <input type="text" id="identifier" name="identifier" placeholder="you@email.com or +91 98765 43210" autocomplete="username">
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password">
+          <button type="button" class="toggle-visibility" id="toggleVisibility" aria-label="Show password" aria-pressed="false">
+            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <a class="forgot-link" href="/forgot-password">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn-primary">Sign in</button>
+    </form>
+
+    <p class="switch-line">New to Nudge? <a href="/signup">Create an account</a></p>
+  </div>
+</main>
+
+<footer>
+  Nudge by Addicoot · Built solo · © 2026
+</footer>
+
+<script>
+  // Visual only — password show/hide. No auth logic wired yet.
+  (function(){
+    var btn = document.getElementById('toggleVisibility');
+    var input = document.getElementById('password');
+    var eye = document.getElementById('eyeIcon');
+
+    var eyeOpen = '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle>';
+    var eyeClosed = '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a18.6 18.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+
+    btn.addEventListener('click', function(){
+      var showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      eye.innerHTML = showing ? eyeOpen : eyeClosed;
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+    });
+  })();
+</script>
+
+</body>
+</html>
