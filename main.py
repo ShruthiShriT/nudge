@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from supabase import create_client
 from nudge_engine import generate_nudge
-
+from fastapi.staticfiles import StaticFiles
 load_dotenv()
 
 url = os.getenv("SUPABASE_URL")
@@ -105,10 +105,44 @@ def get_user_from_token(authorization: str = Header(None)) -> dict:
 
 # --- Endpoints ---
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+def serve_page(filename: str):
+    return FileResponse(f"static/{filename}")
+
+
 @app.get("/")
 def root():
-    return FileResponse("index.html")
+    return serve_page("landing.html")
 
+@app.get("/signin")
+def signin_page():
+    return serve_page("signin.html")
+
+@app.get("/signup")
+def signup_page():
+    return serve_page("signup.html")
+
+@app.get("/onboarding")
+def onboarding_page():
+    return serve_page("onboarding.html")
+
+@app.get("/dashboard")
+def dashboard_page():
+    return serve_page("dashboard.html")
+
+@app.get("/forgot-password")
+def forgot_password_page():
+    return serve_page("forgot-password.html")
+
+@app.get("/reset-password")
+def reset_password_page():
+    return serve_page("reset-password.html")
+
+@app.get("/api.js")
+def api_js():
+    return FileResponse("static/api.js", media_type="application/javascript")
 
 @app.post("/signup")
 def signup(req: CreateUserRequest):

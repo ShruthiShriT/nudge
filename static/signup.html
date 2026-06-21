@@ -45,7 +45,6 @@
     width: 100%;
   }
 
-  /* ---------- Nav ---------- */
   nav{
     display:flex;
     align-items:center;
@@ -219,6 +218,7 @@
   }
   .btn-primary:hover{ background: #2b2b2b; }
   .btn-primary:active{ transform: scale(0.98); }
+  .btn-primary:disabled{ opacity: 0.55; cursor: default; }
 
   .switch-line{
     text-align: center;
@@ -242,7 +242,6 @@
     opacity: 0.45;
   }
 
-  /* ---------- Success state (full page, no card) ---------- */
   .success-state{
     display: none;
     flex-direction: column;
@@ -299,7 +298,6 @@
     .success-state p{ opacity: 0.65 !important; }
   }
 
-  /* ---------- Full-screen confetti overlay ---------- */
   .confetti-overlay{
     position: fixed;
     inset: 0;
@@ -326,6 +324,25 @@
   @media (prefers-reduced-motion: reduce){
     .confetti-overlay{ display: none !important; }
   }
+
+  /* ---------- Status message ---------- */
+  .form-status{
+    font-size: 0.82rem;
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .form-status.error{
+    display: block;
+    background: rgba(220, 38, 38, 0.08);
+    color: #B91C1C;
+  }
+  .form-status.info{
+    display: block;
+    background: rgba(167, 139, 250, 0.12);
+    color: #5B3FBE;
+  }
 </style>
 </head>
 <body>
@@ -345,7 +362,9 @@
       <h1>Create your account</h1>
     </div>
 
-    <form onsubmit="return false;">
+    <div class="form-status" id="formStatus"></div>
+
+    <form id="signupForm">
       <div class="field">
         <label for="email">Email</label>
         <input type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email" required>
@@ -389,7 +408,7 @@
         </div>
       </div>
 
-      <button type="submit" class="btn-primary" onclick="showSuccess(event)">Create account</button>
+      <button type="submit" class="btn-primary" id="submitBtn">Create account</button>
     </form>
 
     <p class="switch-line" id="switchLine">Already have an account? <a href="/signin">Sign in</a></p>
@@ -406,22 +425,31 @@
   Nudge by Addicoot · Built solo · © 2026
 </footer>
 
+<script src="/api.js"></script>
 <script>
-  // Visual only — no real account creation wired yet. Simulates the success moment.
-  function showSuccess(e){
-    e.preventDefault();
-    var form = document.querySelector('form');
+  // Redirect if already signed in
+  if (NudgeAPI.isLoggedIn()) {
+    window.location.href = '/dashboard';
+  }
 
-    if (!form.checkValidity()){
-      form.reportValidity();
-      return;
-    }
+  var form = document.getElementById('signupForm');
+  var statusEl = document.getElementById('formStatus');
+  var submitBtn = document.getElementById('submitBtn');
 
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'form-status ' + type;
+  }
+  function clearStatus() {
+    statusEl.textContent = '';
+    statusEl.className = 'form-status';
+  }
+
+  function showSuccess(name){
     var mainEl = document.querySelector('main');
     var successState = document.getElementById('successState');
     var heading = document.getElementById('successHeading');
 
-    var name = document.getElementById('name').value.trim();
     heading.textContent = name ? 'Welcome to Nudge, ' + name + '!' : 'Welcome to Nudge!';
 
     mainEl.style.display = 'none';
@@ -453,6 +481,45 @@
 
     setTimeout(function(){ overlay.innerHTML = ''; }, 3500);
   }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    clearStatus();
+
+    if (!form.checkValidity()){
+      form.reportValidity();
+      return;
+    }
+
+    var email = document.getElementById('email').value.trim();
+    var countryCode = document.getElementById('countryCode').value;
+    var phone = document.getElementById('phone').value.trim().replace(/\s+/g, '');
+    var name = document.getElementById('name').value.trim();
+    var password = document.getElementById('password').value;
+    // Note: dob is collected but the backend doesn't currently store it —
+    // not sent. Add a `dob` field to /signup if you want this persisted.
+
+    var whatsappNumber = countryCode + phone;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating account…';
+    showStatus('Connecting — this can take a moment if the server was asleep.', 'info');
+
+    try {
+      await NudgeAPI.signup({
+        email: email,
+        name: name,
+        whatsapp_number: whatsappNumber,
+        password: password
+      });
+      clearStatus();
+      showSuccess(name);
+    } catch (err) {
+      showStatus(err.message || 'Something went wrong. Please try again.', 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create account';
+    }
+  });
 
   (function(){
     var btn = document.getElementById('toggleVisibility');

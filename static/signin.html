@@ -206,6 +206,7 @@
   }
   .btn-primary:hover{ background: #2b2b2b; }
   .btn-primary:active{ transform: scale(0.98); }
+  .btn-primary:disabled{ opacity: 0.55; cursor: default; }
 
   .divider{
     display:flex;
@@ -275,6 +276,25 @@
     font-size: 0.78rem;
     opacity: 0.45;
   }
+
+  /* ---------- Status message ---------- */
+  .form-status{
+    font-size: 0.82rem;
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .form-status.error{
+    display: block;
+    background: rgba(220, 38, 38, 0.08);
+    color: #B91C1C;
+  }
+  .form-status.info{
+    display: block;
+    background: rgba(167, 139, 250, 0.12);
+    color: #5B3FBE;
+  }
 </style>
 </head>
 <body>
@@ -293,16 +313,18 @@
       <p>Sign in to keep your streak going.</p>
     </div>
 
-    <form onsubmit="return false;">
+    <div class="form-status" id="formStatus"></div>
+
+    <form id="signinForm">
       <div class="field">
-        <label for="identifier">Email or phone number</label>
-        <input type="text" id="identifier" name="identifier" placeholder="you@email.com or +91 98765 43210" autocomplete="username">
+        <label for="identifier">Email</label>
+        <input type="text" id="identifier" name="identifier" placeholder="you@email.com" autocomplete="username" required>
       </div>
 
       <div class="field">
         <label for="password">Password</label>
         <div class="password-wrap">
-          <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password">
+          <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
           <button type="button" class="toggle-visibility" id="toggleVisibility" aria-label="Show password" aria-pressed="false">
             <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
@@ -316,7 +338,7 @@
         <a class="forgot-link" href="/forgot-password">Forgot password?</a>
       </div>
 
-      <button type="submit" class="btn-primary">Sign in</button>
+      <button type="submit" class="btn-primary" id="submitBtn">Sign in</button>
     </form>
 
     <p class="switch-line">New to Nudge? <a href="/signup">Create an account</a></p>
@@ -327,8 +349,9 @@
   Nudge by Addicoot · Built solo · © 2026
 </footer>
 
+<script src="/api.js"></script>
 <script>
-  // Visual only — password show/hide. No auth logic wired yet.
+  // Password show/hide
   (function(){
     var btn = document.getElementById('toggleVisibility');
     var input = document.getElementById('password');
@@ -345,6 +368,51 @@
       btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
     });
   })();
+
+  // Redirect if already signed in
+  if (NudgeAPI.isLoggedIn()) {
+    window.location.href = '/dashboard';
+  }
+
+  // Form submit -> /login
+  var form = document.getElementById('signinForm');
+  var statusEl = document.getElementById('formStatus');
+  var submitBtn = document.getElementById('submitBtn');
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'form-status ' + type;
+  }
+  function clearStatus() {
+    statusEl.textContent = '';
+    statusEl.className = 'form-status';
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    clearStatus();
+
+    var email = document.getElementById('identifier').value.trim();
+    var password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      showStatus('Please enter your email and password.', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in…';
+    showStatus('Connecting — this can take a moment if the server was asleep.', 'info');
+
+    try {
+      await NudgeAPI.login({ email: email, password: password });
+      window.location.href = '/dashboard';
+    } catch (err) {
+      showStatus(err.message || 'Something went wrong. Please try again.', 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign in';
+    }
+  });
 </script>
 
 </body>

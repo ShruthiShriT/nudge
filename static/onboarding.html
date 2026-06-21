@@ -47,7 +47,6 @@
     width: 100%;
   }
 
-  /* ---------- Nav ---------- */
   nav{
     display:flex;
     align-items:center;
@@ -80,7 +79,6 @@
     padding: clamp(2rem, 8vw, 3.5rem) 0;
   }
 
-  /* ---------- Progress dots ---------- */
   .progress{
     display: flex;
     justify-content: center;
@@ -239,6 +237,7 @@
   }
   .btn-primary:hover{ background: #2b2b2b; }
   .btn-primary:active{ transform: scale(0.98); }
+  .btn-primary:disabled{ opacity: 0.55; cursor: default; }
 
   .btn-secondary{
     width: 100%;
@@ -264,7 +263,6 @@
     opacity: 0.45;
   }
 
-  /* ---------- Nudge preview ---------- */
   .phone-frame{
     background: var(--bg);
     border-radius: 14px;
@@ -300,6 +298,25 @@
     align-items: center;
     text-align: center;
   }
+
+  /* ---------- Status message ---------- */
+  .form-status{
+    font-size: 0.82rem;
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .form-status.error{
+    display: block;
+    background: rgba(220, 38, 38, 0.08);
+    color: #B91C1C;
+  }
+  .form-status.info{
+    display: block;
+    background: rgba(167, 139, 250, 0.12);
+    color: #5B3FBE;
+  }
 </style>
 </head>
 <body>
@@ -322,6 +339,8 @@
 
     <div class="auth-card">
 
+      <div class="form-status" id="formStatus"></div>
+
       <!-- STEP 1: Add goal (with welcome) -->
       <section class="step active" data-step="1">
         <div class="auth-head">
@@ -330,7 +349,7 @@
           <p>This shapes every nudge you'll get — what it says, and when it arrives.</p>
         </div>
 
-        <form onsubmit="return false;">
+        <form id="goalForm">
           <div class="field">
             <label for="goalType">Goal type</label>
             <select id="goalType" name="goalType" required>
@@ -352,7 +371,7 @@
             <input type="time" id="deliveryTime" name="deliveryTime" value="08:00" required>
           </div>
 
-          <button type="submit" class="btn-primary" onclick="validateAndGo(1,2,event)">Continue</button>
+          <button type="submit" class="btn-primary" id="goalSubmitBtn">Continue</button>
         </form>
       </section>
 
@@ -364,14 +383,14 @@
           <p>Big or small — we'll use it to remind you what you're capable of.</p>
         </div>
 
-        <form onsubmit="return false;">
+        <form id="winForm">
           <div class="field">
             <label for="winDescription">Describe your win</label>
             <textarea id="winDescription" name="winDescription" placeholder="e.g. Went for a 5k run this morning" maxlength="200" oninput="updateCharCount('winDescription','winCharCount')" required></textarea>
             <div class="char-count" id="winCharCount">0 / 200</div>
           </div>
 
-          <button type="submit" class="btn-primary" onclick="validateAndGo(2,3,event)">See my first nudge</button>
+          <button type="submit" class="btn-primary" id="winSubmitBtn">See my first nudge</button>
           <button type="button" class="btn-secondary" onclick="goToStep(1)">Back</button>
         </form>
       </section>
@@ -390,7 +409,7 @@
             <p class="line muted" id="nudgeGoal">You're working toward running a half marathon by October — every week of training gets you closer.</p>
             <p class="line accent-line" id="nudgeWin">Remember that 5k run this morning? That's proof you can show up, even on hard days.</p>
             <p class="line muted" id="nudgeAction">Today: take one small step toward this. No pressure — just progress.</p>
-            <p class="line" id="nudgeClosing">You've got this. One nudge at a time.</p>
+            <p class="line" id="nudgeClosing"></p>
             <p class="timestamp" id="nudgeTimestamp">8:00 AM · WhatsApp</p>
           </div>
         </div>
@@ -408,9 +427,32 @@
   Nudge by Addicoot · Built solo · © 2026
 </footer>
 
+<script src="/api.js"></script>
 <script>
-  // Visual only — no real API calls wired yet. State is held in memory for the preview screen.
   var totalSteps = 3;
+  var currentUser = null;
+
+  // Require login
+  (function(){
+    if (!NudgeAPI.isLoggedIn()) {
+      window.location.href = '/signin';
+      return;
+    }
+    currentUser = NudgeAPI.getUser();
+    if (currentUser && currentUser.name) {
+      document.getElementById('welcomeHeading').textContent = 'Welcome, ' + currentUser.name + '! What are you working toward?';
+    }
+  })();
+
+  var statusEl = document.getElementById('formStatus');
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'form-status ' + type;
+  }
+  function clearStatus() {
+    statusEl.textContent = '';
+    statusEl.className = 'form-status';
+  }
 
   function goToStep(step){
     document.querySelectorAll('.step').forEach(function(el){
@@ -423,19 +465,8 @@
       else if (d < step) dot.classList.add('done');
     });
     document.getElementById('skipLink').style.display = (step === totalSteps) ? 'none' : 'inline';
+    clearStatus();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    if (step === 3) buildNudgePreview();
-  }
-
-  function validateAndGo(fromStep, toStep, e){
-    e.preventDefault();
-    var form = document.querySelectorAll('.step[data-step="' + fromStep + '"] form')[0];
-    if (!form.checkValidity()){
-      form.reportValidity();
-      return;
-    }
-    goToStep(toStep);
   }
 
   function updateCharCount(fieldId, countId){
@@ -444,25 +475,107 @@
     count.textContent = field.value.length + ' / 200';
   }
 
-  // TODO: replace this placeholder builder with a live call to GET /nudge/{email}
-  // once the Gemini-powered nudge endpoint is wired up. Right now this just
-  // templates the user's own goal/win text locally — no AI involved yet.
-  function buildNudgePreview(){
-    var goal = document.getElementById('goalDescription').value.trim();
-    var win = document.getElementById('winDescription').value.trim();
-    var time = document.getElementById('deliveryTime').value || '08:00';
+  // --- Step 1: save goal ---
+  var goalForm = document.getElementById('goalForm');
+  var goalSubmitBtn = document.getElementById('goalSubmitBtn');
 
+  goalForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!goalForm.checkValidity()){
+      goalForm.reportValidity();
+      return;
+    }
+    clearStatus();
+
+    var goalType = document.getElementById('goalType').value;
+    var description = document.getElementById('goalDescription').value.trim();
+    // Note: deliveryTime is collected for the preview greeting only —
+    // the backend doesn't yet store a per-user delivery time, so it's
+    // not sent anywhere. Nudges currently go out at 8am IST for everyone.
+
+    goalSubmitBtn.disabled = true;
+    goalSubmitBtn.textContent = 'Saving…';
+    showStatus('Connecting — this can take a moment if the server was asleep.', 'info');
+
+    try {
+      await NudgeAPI.addGoal({ email: currentUser.email, goal_type: goalType, description: description });
+      clearStatus();
+      goToStep(2);
+    } catch (err) {
+      showStatus(err.message || 'Could not save your goal. Please try again.', 'error');
+    } finally {
+      goalSubmitBtn.disabled = false;
+      goalSubmitBtn.textContent = 'Continue';
+    }
+  });
+
+  // --- Step 2: save win, then build preview ---
+  var winForm = document.getElementById('winForm');
+  var winSubmitBtn = document.getElementById('winSubmitBtn');
+
+  winForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!winForm.checkValidity()){
+      winForm.reportValidity();
+      return;
+    }
+    clearStatus();
+
+    var description = document.getElementById('winDescription').value.trim();
+
+    winSubmitBtn.disabled = true;
+    winSubmitBtn.textContent = 'Saving…';
+    showStatus('Generating your first nudge — this can take a moment.', 'info');
+
+    try {
+      await NudgeAPI.addWin({ email: currentUser.email, description: description });
+      goToStep(3);
+      await buildNudgePreview();
+      clearStatus();
+    } catch (err) {
+      showStatus(err.message || 'Could not save your win. Please try again.', 'error');
+    } finally {
+      winSubmitBtn.disabled = false;
+      winSubmitBtn.textContent = 'See my first nudge';
+    }
+  });
+
+  // --- Step 3: real AI nudge, with local fallback ---
+  async function buildNudgePreview(){
+    var time = document.getElementById('deliveryTime').value || '08:00';
     document.getElementById('nudgeGreeting').textContent = greetingForTime(time);
     document.getElementById('nudgeTimestamp').textContent = formatTime(time) + ' · WhatsApp';
     document.getElementById('previewSubtitle').textContent = "This is the kind of message you'll get every day at " + formatTime(time) + ".";
 
+    try {
+      var nudge = await NudgeAPI.getNudge(currentUser.email);
+      // Real nudge is one AI-written message — show it as the single line,
+      // clear the templated filler lines so we don't show both.
+      document.getElementById('nudgeGoal').textContent = '';
+      document.getElementById('nudgeGoal').style.display = 'none';
+      document.getElementById('nudgeAction').style.display = 'none';
+      document.getElementById('nudgeWin').classList.remove('accent-line');
+      document.getElementById('nudgeWin').textContent = nudge;
+      document.getElementById('nudgeClosing').textContent = '';
+    } catch (err) {
+      // Fallback: local templated preview if the live call fails
+      buildLocalPreviewFallback();
+    }
+  }
+
+  function buildLocalPreviewFallback(){
+    var goal = document.getElementById('goalDescription').value.trim();
+    var win = document.getElementById('winDescription').value.trim();
+
+    document.getElementById('nudgeGoal').style.display = '';
+    document.getElementById('nudgeAction').style.display = '';
     document.getElementById('nudgeGoal').textContent = goal
       ? "You're working toward " + lowerFirst(goal) + " — every step counts."
       : "You're working toward something meaningful — every step counts.";
-
     document.getElementById('nudgeWin').textContent = win
       ? "Remember " + lowerFirst(win) + "? That's proof you can show up."
       : "Remember your last win? That's proof you can show up.";
+    document.getElementById('nudgeClosing').textContent = "You've got this. One nudge at a time.";
   }
 
   function greetingForTime(time){
@@ -486,15 +599,6 @@
     if (!str) return str;
     return str.charAt(0).toLowerCase() + str.slice(1);
   }
-
-  // Personalize heading if a name was passed via query param (?name=...)
-  (function(){
-    var params = new URLSearchParams(window.location.search);
-    var name = params.get('name');
-    if (name){
-      document.getElementById('welcomeHeading').textContent = 'Welcome, ' + name + '! What are you working toward?';
-    }
-  })();
 </script>
 
 </body>
