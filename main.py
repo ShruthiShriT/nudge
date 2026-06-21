@@ -3,9 +3,9 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from supabase import create_client
@@ -27,6 +27,10 @@ app.add_middleware(
 )
 
 TOKEN_EXPIRY_DAYS = 30
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
+
+# Simple keyword match for check-in detection. Case-insensitive, checked as substring.
+CHECK_IN_KEYWORDS = ["done", "✅", "yes", "finished", "completed", "did it"]
 
 
 # --- Request models ---
@@ -263,6 +267,121 @@ def get_nudge(email: str):
     }).execute()
 
     return {"email": email, "nudge": message}
+
+
+def get_user_by_whatsapp(whatsapp_number: str) -> dict | None:
+    """Match an inbound WhatsApp number against stored users.whatsapp_number.
+    Tries exact match first, then a loose suffix match (last 10 digits) to
+    tolerate +91 vs no-plus vs spacing differences."""
+    clean = whatsapp_number.strip().replace("+", "").replace(" ", "").replace("-", "")
+
+    result = supabase.table("users").select("*").eq("whatsapp_number", clean).execute()
+    if result.data:
+        return result.data[0]
+
+    result = supabase.table("users").select("*").eq("whatsapp_number", f"+{clean}").execute()
+    if result.data:
+        return result.data[0]
+
+    # Loose fallback: match on last 10 digits in case formatting differs
+    all_users = supabase.table("users").select("*").execute().data
+    suffix = clean[-10:]
+    for u in all_users:
+        stored = (u.get("whatsapp_number") or "").replace("+", "").replace(" ", "").replace("-", "")
+        if stored[-10:] == suffix and suffix:
+            return u
+    return None
+
+
+def is_check_in_reply(text: str) -> bool:
+    lowered = text.strip().lower()
+    return any(keyword in lowered for keyword in CHECK_IN_KEYWORDS)
+
+
+@app.get("/webhook/whatsapp")
+async def verify_whatsapp_webhook(request: Request):
+    """Meta calls this once when you register the webhook URL in the App Dashboard.
+    Query params come in as hub.mode / hub.verify_token / hub.challenge — dots aren't
+    valid Python identifiers so we read them off request.query_params directly."""
+    params = request.query_params
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+
+    if mode == "subscribe" and token == WHATSAPP_VERIFY_TOKEN:
+        return PlainTextResponse(content=challenge or "", status_code=200)
+    raise HTTPException(status_code=403, detail="Verification failed")
+
+
+@app.post("/webhook/whatsapp")
+async def receive_whatsapp_webhook(request: Request):
+    """Handles inbound WhatsApp messages (user replies). Detects check-in
+    keywords and logs every inbound message to check_ins for streak tracking."""
+    payload = await request.json()
+
+    try:
+        entry = payload.get("entry", [])[0]
+        change = entry.get("changes", [])[0]
+        value = change.get("value", {})
+        messages = value.get("messages", [])
+
+        if not messages:
+            # Could be a status update (delivered/read) rather than a message — ignore
+            return {"status": "ignored"}
+
+        for msg in messages:
+            from_number = msg.get("from", "")
+            text = msg.get("text", {}).get("body", "")
+
+            user = get_user_by_whatsapp(from_number)
+            if not user:
+                continue  # message from unknown number, skip
+
+            matched = is_check_in_reply(text)
+            supabase.table("check_ins").insert({
+                "user_id": user["id"],
+                "raw_message": text,
+                "matched": matched,
+            }).execute()
+
+        return {"status": "ok"}
+
+    except (IndexError, KeyError, AttributeError):
+        # Malformed or unexpected payload shape — don't 500, just acknowledge
+        return {"status": "ignored"}
+
+
+@app.get("/check-ins/{email}/streak")
+def get_check_in_streak(email: str):
+    """Returns the user's current consecutive-day check-in streak, used by
+    the dashboard's streak panel. A day counts if it has at least one
+    matched=True check-in."""
+    user = get_user(email)
+    result = (
+        supabase.table("check_ins")
+        .select("created_at")
+        .eq("user_id", user["id"])
+        .eq("matched", True)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    if not result.data:
+        return {"email": email, "streak": 0}
+
+    # Collect distinct dates (IST-naive, good enough for daily streaks) check-ins occurred on
+    seen_dates = set()
+    for row in result.data:
+        d = datetime.fromisoformat(row["created_at"]).date()
+        seen_dates.add(d)
+
+    streak = 0
+    cursor = datetime.now(timezone.utc).date()
+    while cursor in seen_dates:
+        streak += 1
+        cursor = cursor - timedelta(days=1)
+
+    return {"email": email, "streak": streak}
 
 
 # Start scheduler when app starts

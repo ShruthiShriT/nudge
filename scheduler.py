@@ -4,6 +4,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from supabase import create_client
 from nudge_engine import generate_nudge
+from whatsapp_sender import whatsapp_send, WhatsAppSendError
 import pytz
 import logging
 
@@ -57,8 +58,15 @@ def send_daily_nudges():
                 "message": message
             }).execute()
 
-            # TODO: Replace this print with whatsapp_send(whatsapp, message) once Meta is ready
-            logger.info(f" Nudge for {name} ({whatsapp}):\n{message}\n{'-'*50}")
+            # Send via WhatsApp (Meta Cloud API, approved 'daily_nudge' template)
+            if whatsapp == "N/A":
+                logger.info(f"Skipping WhatsApp send for {email} — no number on file")
+            else:
+                try:
+                    whatsapp_send(whatsapp, message)
+                    logger.info(f"Sent nudge to {name} ({whatsapp})")
+                except WhatsAppSendError as e:
+                    logger.error(f"WhatsApp send failed for {name} ({whatsapp}): {e}")
 
         except Exception as e:
             logger.error(f" Error processing {user.get('email')}: {e}")

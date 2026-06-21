@@ -1,0 +1,16 @@
+-- Phase 2: check_ins table for WhatsApp reply-based streak tracking
+-- Run this in Supabase SQL editor.
+
+create table if not exists check_ins (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references users(id) on delete cascade,
+    raw_message text not null,
+    matched boolean not null default false,
+    created_at timestamptz not null default now()
+);
+
+create index if not exists idx_check_ins_user_id on check_ins(user_id);
+create index if not exists idx_check_ins_created_at on check_ins(created_at);
+
+-- One row per inbound message (matched or not) keeps a full audit trail,
+-- so streak logic can be recomputed later without re-parsing webhook payloads.
