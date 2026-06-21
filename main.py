@@ -54,6 +54,15 @@ class WinRequest(BaseModel):
     description: str
     goal_id: str | None = None
 
+class ManualCheckInRequest(BaseModel):
+    email: str
+
+class UpdateProfileRequest(BaseModel):
+    email: str
+    name: str | None = None
+    whatsapp_number: str | None = None
+    delivery_time: str | None = None  # 'HH:MM', 24-hour
+
 
 # --- Helpers ---
 def get_user(email: str) -> dict:
@@ -416,6 +425,114 @@ def get_check_in_streak(email: str):
         cursor = cursor - timedelta(days=1)
 
     return {"email": email, "streak": streak}
+
+
+@app.post("/check-ins/manual")
+def manual_check_in(req: ManualCheckInRequest):
+    """Lets a user mark today done from the dashboard, instead of only
+    via WhatsApp reply. Inserts a matched=True row just like the webhook
+    does, so it counts toward the streak the same way."""
+    user = get_user(req.email)
+
+    # Avoid double-counting if they already checked in today (manually
+    # or via WhatsApp) — look for any matched check-in already today.
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    existing_today = (
+        supabase.table("check_ins")
+        .select("id")
+        .eq("user_id", user["id"])
+        .eq("matched", True)
+        .gte("created_at", today_start.isoformat())
+        .execute()
+    )
+    if existing_today.data:
+        return {"message": "Already checked in today", "already_checked_in": True}
+
+    supabase.table("check_ins").insert({
+        "user_id": user["id"],
+        "raw_message": "(marked done from dashboard)",
+        "matched": True,
+    }).execute()
+
+    return {"message": "Checked in", "already_checked_in": False}
+
+
+@app.get("/check-ins/{email}/week")
+def get_check_in_week(email: str):
+    """Returns real per-day check-in data for the last 7 calendar days
+    (today included), so the dashboard streak grid can show actual days
+    instead of approximating from the single streak number."""
+    user = get_user(email)
+
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+
+    result = (
+        supabase.table("check_ins")
+        .select("created_at")
+        .eq("user_id", user["id"])
+        .eq("matched", True)
+        .gte("created_at", seven_days_ago.isoformat())
+        .execute()
+    )
+
+    done_dates = set()
+    for row in result.data:
+        d = datetime.fromisoformat(row["created_at"]).date()
+        done_dates.add(d.isoformat())
+
+    days = []
+    today = datetime.now(timezone.utc).date()
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        days.append({
+            "date": d.isoformat(),
+            "done": d.isoformat() in done_dates,
+            "is_today": i == 0,
+        })
+
+    return {"email": email, "days": days}
+
+
+@app.put("/users/{email}")
+def update_profile(email: str, req: UpdateProfileRequest):
+    """Lets a user edit name, WhatsApp number, and delivery time from
+    the dashboard profile panel."""
+    user = get_user(email)
+
+    update_data = {}
+    if req.name is not None:
+        update_data["name"] = req.name
+    if req.whatsapp_number is not None:
+        update_data["whatsapp_number"] = req.whatsapp_number
+    if req.delivery_time is not None:
+        update_data["delivery_time"] = req.delivery_time
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    result = supabase.table("users").update(update_data).eq("id", user["id"]).execute()
+    updated_user = result.data[0]
+    updated_user.pop("password_hash", None)
+    return {"message": "Profile updated", "user": updated_user}
+
+
+@app.delete("/users/{email}")
+def delete_account(email: str):
+    """Permanently deletes a user and everything tied to them — goals,
+    wins, check-ins, daily message history, and active sessions."""
+    user = get_user(email)
+    user_id = user["id"]
+
+    supabase.table("goals").delete().eq("user_id", user_id).execute()
+    supabase.table("wins").delete().eq("user_id", user_id).execute()
+    supabase.table("check_ins").delete().eq("user_id", user_id).execute()
+    supabase.table("daily_messages").delete().eq("user_id", user_id).execute()
+    supabase.table("sessions").delete().eq("user_id", user_id).execute()
+    supabase.table("users").delete().eq("id", user_id).execute()
+
+    return {"message": "Account deleted"}
 
 
 # Start scheduler when app starts
