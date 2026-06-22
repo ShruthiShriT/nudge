@@ -1079,7 +1079,7 @@
           </div>
           <div class="streak-days" id="streakDays"></div>
           <button class="btn-primary streak-mark-btn" id="streakMarkBtn" onclick="markTodayDone()">Mark today done</button>
-          <p class="streak-caption">This local mark doesn't sync to the server yet — real check-ins come from WhatsApp replies.</p>
+          <p class="streak-caption">We'll also detect check-ins from WhatsApp replies.</p>
         </div>
 
         <div class="goal-grid" id="goalGrid">
@@ -1122,6 +1122,7 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Account details</h2>
+            <button class="btn-secondary edit-btn" id="profileEditBtn" onclick="toggleProfileEdit()">Edit</button>
           </div>
 
           <div class="field-row">
@@ -1144,10 +1145,16 @@
             </div>
             <div class="field">
               <label for="pTime">Delivery time</label>
-              <div class="time-display">Daily at 8:00 AM</div>
+              <div class="time-display" id="pTimeDisplay">Daily at 8:00 AM</div>
+              <input type="time" id="pTime" value="08:00" disabled style="display:none;">
             </div>
           </div>
-          <p class="modal-note" style="margin-top:0.5rem;">Account details are read-only for now — editing isn't wired to the backend yet.</p>
+
+          <div class="edit-actions" id="profileEditActions" style="display:none;">
+            <button class="btn-primary" id="profileSaveBtn" onclick="saveProfile()">Save changes</button>
+            <button class="btn-secondary" onclick="toggleProfileEdit()">Cancel</button>
+          </div>
+          <p class="modal-note" id="profileEditNote" style="display:none;">Changing delivery time here saves your preference, but the daily send schedule itself is still fixed at 8am IST for everyone — ask Shruthi if you want this fully dynamic.</p>
         </div>
 
         <div class="panel delivery-panel">
@@ -1261,10 +1268,9 @@
   <div class="modal">
     <h2>Delete your account?</h2>
     <p style="font-size:0.88rem; opacity:0.65; margin:-0.5rem 0 1rem;">This permanently removes your goals, wins, and nudge history. This can't be undone.</p>
-    <p class="modal-note">Account deletion isn't wired to the backend yet — this won't actually delete anything.</p>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeDeleteModal()">Keep my account</button>
-      <button class="btn-primary" style="background:#B3432B;" onclick="closeDeleteModal()">Delete account</button>
+      <button class="btn-primary" id="deleteConfirmBtn" style="background:#B3432B;" onclick="confirmDeleteAccount()">Delete account</button>
     </div>
   </div>
 </div>
@@ -1315,6 +1321,9 @@
     document.getElementById('pName').value = currentUser.name || '';
     document.getElementById('pEmail').value = currentUser.email || '';
     document.getElementById('pPhone').value = currentUser.whatsapp_number || '';
+    var savedTime = currentUser.delivery_time || '08:00';
+    document.getElementById('pTime').value = savedTime;
+    document.getElementById('pTimeDisplay').textContent = 'Daily at ' + formatTimeDisplay(savedTime);
 
     var hour = new Date().getHours();
     var greet = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
@@ -1384,71 +1393,75 @@
     }
   }
 
-  // ---------- Streak (backend gives a single number, not per-day data) ----------
+  // ---------- Streak (real per-day data + real streak count) ----------
+  var todayAlreadyDone = false;
+
   async function loadStreak(){
     var streak = 0;
+    var days = [];
     try {
       streak = await NudgeAPI.getStreak(currentUser.email);
     } catch (err) {
       streak = 0;
     }
+    try {
+      days = await NudgeAPI.getCheckInWeek(currentUser.email);
+    } catch (err) {
+      days = [];
+    }
     document.getElementById('streakCountNum').textContent = streak;
-    renderStreakDays(streak);
+    renderStreakDays(days);
   }
 
-  function renderStreakDays(streak){
+  function renderStreakDays(days){
     var container = document.getElementById('streakDays');
     container.innerHTML = '';
     var dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var today = new Date();
+    todayAlreadyDone = false;
 
-    for (var i = 6; i >= 0; i--){
-      var d = new Date(today);
-      d.setDate(today.getDate() - i);
-      var isToday = (i === 0);
-      var daysAgo = i;
-      var isDone = daysAgo < streak; // trailing `streak` days ending today are "done"
-
+    days.forEach(function(day){
+      var d = new Date(day.date + 'T00:00:00');
       var dayEl = document.createElement('div');
-      dayEl.className = 'streak-day' + (isDone ? ' done' : '') + (isToday && !isDone ? ' today' : '');
-      if (isToday) dayEl.id = 'todayDot';
+      dayEl.className = 'streak-day' + (day.done ? ' done' : '') + (day.is_today && !day.done ? ' today' : '');
+      if (day.is_today) {
+        dayEl.id = 'todayDot';
+        todayAlreadyDone = day.done;
+      }
 
-      var dotInner = isDone
+      var dotInner = day.done
         ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
         : '';
 
       dayEl.innerHTML = '<span class="dlabel">' + dayLabels[d.getDay()] + '</span><div class="dot">' + dotInner + '</div>';
       container.appendChild(dayEl);
-    }
+    });
 
     var btn = document.getElementById('streakMarkBtn');
-    var todayDot = document.getElementById('todayDot');
-    btn.textContent = (todayDot && todayDot.classList.contains('done')) ? 'Undo check-in (local only)' : 'Mark today done (local only)';
+    if (todayAlreadyDone) {
+      btn.textContent = 'Checked in today ✓';
+      btn.disabled = true;
+    } else {
+      btn.textContent = 'Mark today done';
+      btn.disabled = false;
+    }
   }
 
-  function markTodayDone(){
-    var todayDot = document.getElementById('todayDot');
-    var countEl = document.getElementById('streakCountNum');
+  async function markTodayDone(){
+    if (todayAlreadyDone) return;
+
     var btn = document.getElementById('streakMarkBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
 
-    if (!todayDot){
-      // today was already counted as part of the real streak
-      return;
-    }
-
-    var isDone = todayDot.classList.contains('done');
-    if (!isDone){
-      todayDot.classList.remove('today');
-      todayDot.classList.add('done');
-      todayDot.querySelector('.dot').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-      countEl.textContent = (parseInt(countEl.textContent, 10) + 1) + '';
-      btn.textContent = 'Undo check-in (local only)';
-    } else {
-      todayDot.classList.remove('done');
-      todayDot.classList.add('today');
-      todayDot.querySelector('.dot').innerHTML = '';
-      countEl.textContent = (parseInt(countEl.textContent, 10) - 1) + '';
-      btn.textContent = 'Mark today done (local only)';
+    try {
+      await NudgeAPI.manualCheckIn(currentUser.email);
+      await loadStreak();
+      updateStoryLine();
+      showToast('Checked in for today 🎉');
+    } catch (err) {
+      showToast(err.message || 'Could not check in');
+      btn.disabled = false;
+      btn.textContent = 'Mark today done';
     }
   }
 
@@ -1652,12 +1665,78 @@
     }
   }
 
-  // ---------- Delete account (stub — no backend endpoint yet) ----------
+  // ---------- Profile edit (real) ----------
+  function toggleProfileEdit(){
+    var disabled = document.getElementById('pName').disabled;
+    ['pName','pPhone'].forEach(function(id){
+      document.getElementById(id).disabled = !disabled;
+    });
+    document.getElementById('profileEditActions').style.display = disabled ? 'flex' : 'none';
+    document.getElementById('profileEditBtn').style.display = disabled ? 'none' : 'inline-block';
+    document.getElementById('profileEditNote').style.display = disabled ? 'block' : 'none';
+    document.getElementById('pTime').style.display = disabled ? 'block' : 'none';
+    document.getElementById('pTimeDisplay').style.display = disabled ? 'none' : 'block';
+  }
+
+  function formatTimeDisplay(time){
+    var parts = (time || '08:00').split(':');
+    var hour = parseInt(parts[0], 10);
+    var min = parts[1];
+    var period = hour >= 12 ? 'PM' : 'AM';
+    var displayHour = hour % 12; if (displayHour === 0) displayHour = 12;
+    return displayHour + ':' + min + ' ' + period;
+  }
+
+  async function saveProfile(){
+    var name = document.getElementById('pName').value.trim();
+    var phone = document.getElementById('pPhone').value.trim();
+    var time = document.getElementById('pTime').value || '08:00';
+
+    var btn = document.getElementById('profileSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      var updatedUser = await NudgeAPI.updateProfile({
+        email: currentUser.email,
+        name: name,
+        whatsapp_number: phone,
+        delivery_time: time
+      });
+      currentUser = updatedUser;
+      document.getElementById('pTimeDisplay').textContent = 'Daily at ' + formatTimeDisplay(time);
+      renderUserChrome();
+      toggleProfileEdit();
+      showToast('Profile updated');
+    } catch (err) {
+      showToast(err.message || 'Could not update profile');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+    }
+  }
+
+  // ---------- Delete account (real) ----------
   function openDeleteModal(){
     document.getElementById('deleteModalOverlay').classList.add('open');
   }
   function closeDeleteModal(){
     document.getElementById('deleteModalOverlay').classList.remove('open');
+  }
+
+  async function confirmDeleteAccount(){
+    var btn = document.getElementById('deleteConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+
+    try {
+      await NudgeAPI.deleteAccount(currentUser.email);
+      window.location.href = '/signin';
+    } catch (err) {
+      showToast(err.message || 'Could not delete account');
+      btn.disabled = false;
+      btn.textContent = 'Delete account';
+    }
   }
 
   // ---------- Helpers ----------

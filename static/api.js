@@ -143,6 +143,42 @@ const NudgeAPI = (function () {
     return data.streak;
   }
 
+  async function getCheckInWeek(email) {
+    const data = await request(`/check-ins/${encodeURIComponent(email)}/week`);
+    return data.days;
+  }
+
+  async function manualCheckIn(email) {
+    const data = await request("/check-ins/manual", {
+      method: "POST",
+      body: { email },
+    });
+    return data; // { message, already_checked_in }
+  }
+
+  // --- Profile ---
+  async function updateProfile({ email, name, whatsapp_number, delivery_time }) {
+    const body = { email };
+    if (name !== undefined) body.name = name;
+    if (whatsapp_number !== undefined) body.whatsapp_number = whatsapp_number;
+    if (delivery_time !== undefined) body.delivery_time = delivery_time;
+
+    const data = await request(`/users/${encodeURIComponent(email)}`, {
+      method: "PUT",
+      body,
+    });
+    setSession(getToken(), data.user); // refresh cached user with new details
+    return data.user;
+  }
+
+  async function deleteAccount(email) {
+    const data = await request(`/users/${encodeURIComponent(email)}`, {
+      method: "DELETE",
+    });
+    clearSession();
+    return data;
+  }
+
   return {
     getToken,
     getUser,
@@ -158,5 +194,9 @@ const NudgeAPI = (function () {
     addWin,
     getNudge,
     getStreak,
+    getCheckInWeek,
+    manualCheckIn,
+    updateProfile,
+    deleteAccount,
   };
 })();
