@@ -156,6 +156,14 @@ const NudgeAPI = (function () {
     return data; // { message, already_checked_in }
   }
 
+  async function undoCheckIn(email) {
+    const data = await request("/check-ins/manual", {
+      method: "DELETE",
+      body: { email },
+    });
+    return data;
+  }
+
   // --- Profile ---
   async function updateProfile({ email, name, whatsapp_number, delivery_time }) {
     const body = { email };
@@ -196,6 +204,7 @@ const NudgeAPI = (function () {
     getStreak,
     getCheckInWeek,
     manualCheckIn,
+    undoCheckIn,
     updateProfile,
     deleteAccount,
   };

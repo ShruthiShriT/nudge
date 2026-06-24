@@ -1437,31 +1437,43 @@
     });
 
     var btn = document.getElementById('streakMarkBtn');
+    btn.disabled = false;
     if (todayAlreadyDone) {
-      btn.textContent = 'Checked in today ✓';
-      btn.disabled = true;
+      btn.textContent = 'Checked in today ✓ — Undo';
     } else {
       btn.textContent = 'Mark today done';
-      btn.disabled = false;
     }
   }
 
   async function markTodayDone(){
-    if (todayAlreadyDone) return;
-
     var btn = document.getElementById('streakMarkBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
 
-    try {
-      await NudgeAPI.manualCheckIn(currentUser.email);
-      await loadStreak();
-      updateStoryLine();
-      showToast('Checked in for today 🎉');
-    } catch (err) {
-      showToast(err.message || 'Could not check in');
-      btn.disabled = false;
-      btn.textContent = 'Mark today done';
+    if (todayAlreadyDone) {
+      btn.disabled = true;
+      btn.textContent = 'Undoing…';
+      try {
+        await NudgeAPI.undoCheckIn(currentUser.email);
+        await loadStreak();
+        updateStoryLine();
+        showToast('Check-in removed');
+      } catch (err) {
+        showToast(err.message || 'Could not undo');
+        btn.disabled = false;
+        btn.textContent = 'Checked in today ✓ — Undo';
+      }
+    } else {
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        await NudgeAPI.manualCheckIn(currentUser.email);
+        await loadStreak();
+        updateStoryLine();
+        showToast('Checked in for today 🎉');
+      } catch (err) {
+        showToast(err.message || 'Could not check in');
+        btn.disabled = false;
+        btn.textContent = 'Mark today done';
+      }
     }
   }
 
