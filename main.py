@@ -3,6 +3,8 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
+
+import random
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -554,6 +556,74 @@ def delete_account(email: str):
     return {"message": "Account deleted"}
 
 
+import random
+from resend_email import send_otp_email
+
+@app.post("/forgot-password")
+def forgot_password(req: dict):
+    """Generates a 6-digit OTP, saves it to the DB, and emails it to the user."""
+    email = req.get("email", "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    # Don't reveal whether the account exists — always return 200
+    result = supabase.table("users").select("id, name").eq("email", email).execute()
+    if not result.data:
+        return {"message": "If an account exists, a reset code has been sent"}
+
+    user = result.data[0]
+    otp = str(random.randint(100000, 999999))
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    # Invalidate any existing unused OTPs for this email
+    supabase.table("password_reset_otps").update({"used": True}).eq("email", email).eq("used", False).execute()
+
+    supabase.table("password_reset_otps").insert({
+        "email": email,
+        "otp": otp,
+        "expires_at": expires_at.isoformat()
+    }).execute()
+
+    send_otp_email(to_email=email, otp=otp, name=user.get("name") or "there")
+
+    return {"message": "If an account exists, a reset code has been sent"}
+
+
+@app.post("/reset-password")
+def reset_password(req: dict):
+    """Verifies the OTP and updates the user's password."""
+    email = req.get("email", "").strip().lower()
+    otp = req.get("otp", "").strip()
+    new_password = req.get("new_password", "")
+
+    if not email or not otp or not new_password:
+        raise HTTPException(status_code=400, detail="Email, OTP, and new password are required")
+
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    # Find valid OTP
+    result = supabase.table("password_reset_otps").select("*").eq("email", email).eq("otp", otp).eq("used", False).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+
+    otp_row = result.data[0]
+    expires_at = datetime.fromisoformat(otp_row["expires_at"])
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Reset code has expired — request a new one")
+
+    # Update password
+    supabase.table("users").update({
+        "password_hash": hash_password(new_password)
+    }).eq("email", email).execute()
+
+    # Mark OTP as used
+    supabase.table("password_reset_otps").update({"used": True}).eq("id", otp_row["id"]).execute()
+
+    return {"message": "Password updated successfully"}
+
 # Start scheduler when app starts
 from scheduler import start_scheduler
 start_scheduler()
+
