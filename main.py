@@ -456,6 +456,25 @@ def manual_check_in(req: ManualCheckInRequest):
 
     return {"message": "Checked in", "already_checked_in": False}
 
+@app.delete("/check-ins/manual")
+def undo_manual_check_in(req: ManualCheckInRequest):
+    """Deletes today's manual dashboard check-in so the user can undo it.
+    Only removes rows where raw_message is the dashboard marker — won't
+    touch real WhatsApp check-ins."""
+    user = get_user(req.email)
+
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    supabase.table("check_ins").delete().eq(
+        "user_id", user["id"]
+    ).eq(
+        "raw_message", "(marked done from dashboard)"
+    ).gte(
+        "created_at", today_start.isoformat()
+    ).execute()
+
+    return {"message": "Check-in undone"}
 
 @app.get("/check-ins/{email}/week")
 def get_check_in_week(email: str):

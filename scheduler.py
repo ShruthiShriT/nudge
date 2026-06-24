@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -21,23 +22,33 @@ IST = pytz.timezone("Asia/Kolkata")
 
 
 def send_daily_nudges():
-    logger.info("Scheduler triggered — sending daily nudges...")
+    """Runs every minute. Sends a nudge to users whose delivery_time
+    matches the current HH:MM in their local time (stored as IST for now).
+    Falls back to 08:00 if delivery_time is null."""
+    now_ist = datetime.now(IST)
+    current_hhmm = now_ist.strftime("%H:%M")
+    logger.info(f"Scheduler tick — {current_hhmm} IST")
 
-    # Fetch all users
     users = supabase.table("users").select("*").execute().data
-
     if not users:
-        logger.info("No users found.")
         return
 
     for user in users:
         try:
+            delivery_time = user.get("delivery_time") or "08:00"
+
+            # Normalize to HH:MM in case DB stored it with seconds e.g. "08:00:00"
+            if len(delivery_time) > 5:
+                delivery_time = delivery_time[:5]
+
+            if delivery_time != current_hhmm:
+                continue  # Not their send time yet
+
             user_id = user["id"]
             email = user["email"]
             name = user.get("name") or "Friend"
             whatsapp = user.get("whatsapp_number") or "N/A"
 
-            # Fetch goals
             goals_data = supabase.table("goals").select("*").eq("user_id", user_id).execute().data
             goals = {g["goal_type"]: g["description"] for g in goals_data}
 
@@ -45,43 +56,37 @@ def send_daily_nudges():
                 logger.info(f"Skipping {email} — no goals set")
                 continue
 
-            # Fetch wins
             wins_data = supabase.table("wins").select("*").eq("user_id", user_id).execute().data
             wins = [w["description"] for w in wins_data]
 
-            # Generate nudge
             message = generate_nudge(goals, wins, name=name)
 
-            # Save to daily_messages
             supabase.table("daily_messages").insert({
                 "user_id": user_id,
                 "message": message
             }).execute()
 
-            # Send via WhatsApp (Meta Cloud API, approved 'daily_nudge' template)
             if whatsapp == "N/A":
                 logger.info(f"Skipping WhatsApp send for {email} — no number on file")
             else:
                 try:
                     whatsapp_send(whatsapp, message)
-                    logger.info(f"Sent nudge to {name} ({whatsapp})")
+                    logger.info(f"Sent nudge to {name} ({whatsapp}) at {current_hhmm}")
                 except WhatsAppSendError as e:
                     logger.error(f"WhatsApp send failed for {name} ({whatsapp}): {e}")
 
         except Exception as e:
-            logger.error(f" Error processing {user.get('email')}: {e}")
-
-    logger.info(" Done sending nudges!")
+            logger.error(f"Error processing {user.get('email')}: {e}")
 
 
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=IST)
     scheduler.add_job(
         send_daily_nudges,
-        trigger=CronTrigger(hour=8, minute=0, timezone=IST),
+        trigger=CronTrigger(minute="*", timezone=IST),  # every minute
         id="daily_nudge",
         replace_existing=True
     )
     scheduler.start()
-    logger.info("  Scheduler started — nudges will fire at 8:00 AM IST daily")
+    logger.info("Scheduler started — checking delivery times every minute")
     return scheduler
