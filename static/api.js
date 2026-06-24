@@ -163,7 +163,19 @@ const NudgeAPI = (function () {
     });
     return data;
   }
+  async function forgotPassword(email) {
+    return await request("/forgot-password", {
+      method: "POST",
+      body: { email },
+    });
+  }
 
+  async function resetPassword({ email, otp, new_password }) {
+    return await request("/reset-password", {
+      method: "POST",
+      body: { email, otp, new_password },
+    });
+  }
   // --- Profile ---
   async function updateProfile({ email, name, whatsapp_number, delivery_time }) {
     const body = { email };
@@ -207,5 +219,7 @@ const NudgeAPI = (function () {
     undoCheckIn,
     updateProfile,
     deleteAccount,
+    forgotPassword,
+    resetPassword,
   };
 })();
