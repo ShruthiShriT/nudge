@@ -1,10 +1,9 @@
 import os
 import secrets
+import random
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-
-import random
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -13,6 +12,8 @@ from dotenv import load_dotenv
 from supabase import create_client
 from nudge_engine import generate_nudge
 from fastapi.staticfiles import StaticFiles
+from resend_email import send_otp_email
+
 load_dotenv()
 
 url = os.getenv("SUPABASE_URL")
@@ -64,6 +65,14 @@ class UpdateProfileRequest(BaseModel):
     name: str | None = None
     whatsapp_number: str | None = None
     delivery_time: str | None = None  # 'HH:MM', 24-hour
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
 
 
 # --- Helpers ---
@@ -315,9 +324,7 @@ def get_nudge(email: str):
 
 
 def get_user_by_whatsapp(whatsapp_number: str) -> dict | None:
-    """Match an inbound WhatsApp number against stored users.whatsapp_number.
-    Tries exact match first, then a loose suffix match (last 10 digits) to
-    tolerate +91 vs no-plus vs spacing differences."""
+    """Match an inbound WhatsApp number against stored users.whatsapp_number."""
     clean = whatsapp_number.strip().replace("+", "").replace(" ", "").replace("-", "")
 
     result = supabase.table("users").select("*").eq("whatsapp_number", clean).execute()
@@ -328,7 +335,6 @@ def get_user_by_whatsapp(whatsapp_number: str) -> dict | None:
     if result.data:
         return result.data[0]
 
-    # Loose fallback: match on last 10 digits in case formatting differs
     all_users = supabase.table("users").select("*").execute().data
     suffix = clean[-10:]
     for u in all_users:
@@ -345,9 +351,6 @@ def is_check_in_reply(text: str) -> bool:
 
 @app.get("/webhook/whatsapp")
 async def verify_whatsapp_webhook(request: Request):
-    """Meta calls this once when you register the webhook URL in the App Dashboard.
-    Query params come in as hub.mode / hub.verify_token / hub.challenge — dots aren't
-    valid Python identifiers so we read them off request.query_params directly."""
     params = request.query_params
     mode = params.get("hub.mode")
     token = params.get("hub.verify_token")
@@ -360,8 +363,6 @@ async def verify_whatsapp_webhook(request: Request):
 
 @app.post("/webhook/whatsapp")
 async def receive_whatsapp_webhook(request: Request):
-    """Handles inbound WhatsApp messages (user replies). Detects check-in
-    keywords and logs every inbound message to check_ins for streak tracking."""
     payload = await request.json()
 
     try:
@@ -371,7 +372,6 @@ async def receive_whatsapp_webhook(request: Request):
         messages = value.get("messages", [])
 
         if not messages:
-            # Could be a status update (delivered/read) rather than a message — ignore
             return {"status": "ignored"}
 
         for msg in messages:
@@ -380,7 +380,7 @@ async def receive_whatsapp_webhook(request: Request):
 
             user = get_user_by_whatsapp(from_number)
             if not user:
-                continue  # message from unknown number, skip
+                continue
 
             matched = is_check_in_reply(text)
             supabase.table("check_ins").insert({
@@ -392,15 +392,11 @@ async def receive_whatsapp_webhook(request: Request):
         return {"status": "ok"}
 
     except (IndexError, KeyError, AttributeError):
-        # Malformed or unexpected payload shape — don't 500, just acknowledge
         return {"status": "ignored"}
 
 
 @app.get("/check-ins/{email}/streak")
 def get_check_in_streak(email: str):
-    """Returns the user's current consecutive-day check-in streak, used by
-    the dashboard's streak panel. A day counts if it has at least one
-    matched=True check-in."""
     user = get_user(email)
     result = (
         supabase.table("check_ins")
@@ -414,7 +410,6 @@ def get_check_in_streak(email: str):
     if not result.data:
         return {"email": email, "streak": 0}
 
-    # Collect distinct dates (IST-naive, good enough for daily streaks) check-ins occurred on
     seen_dates = set()
     for row in result.data:
         d = datetime.fromisoformat(row["created_at"]).date()
@@ -431,13 +426,8 @@ def get_check_in_streak(email: str):
 
 @app.post("/check-ins/manual")
 def manual_check_in(req: ManualCheckInRequest):
-    """Lets a user mark today done from the dashboard, instead of only
-    via WhatsApp reply. Inserts a matched=True row just like the webhook
-    does, so it counts toward the streak the same way."""
     user = get_user(req.email)
 
-    # Avoid double-counting if they already checked in today (manually
-    # or via WhatsApp) — look for any matched check-in already today.
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     existing_today = (
         supabase.table("check_ins")
@@ -458,11 +448,9 @@ def manual_check_in(req: ManualCheckInRequest):
 
     return {"message": "Checked in", "already_checked_in": False}
 
+
 @app.delete("/check-ins/manual")
 def undo_manual_check_in(req: ManualCheckInRequest):
-    """Deletes today's manual dashboard check-in so the user can undo it.
-    Only removes rows where raw_message is the dashboard marker — won't
-    touch real WhatsApp check-ins."""
     user = get_user(req.email)
 
     today_start = datetime.now(timezone.utc).replace(
@@ -478,11 +466,9 @@ def undo_manual_check_in(req: ManualCheckInRequest):
 
     return {"message": "Check-in undone"}
 
+
 @app.get("/check-ins/{email}/week")
 def get_check_in_week(email: str):
-    """Returns real per-day check-in data for the last 7 calendar days
-    (today included), so the dashboard streak grid can show actual days
-    instead of approximating from the single streak number."""
     user = get_user(email)
 
     seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).replace(
@@ -518,8 +504,6 @@ def get_check_in_week(email: str):
 
 @app.put("/users/{email}")
 def update_profile(email: str, req: UpdateProfileRequest):
-    """Lets a user edit name, WhatsApp number, and delivery time from
-    the dashboard profile panel."""
     user = get_user(email)
 
     update_data = {}
@@ -541,8 +525,6 @@ def update_profile(email: str, req: UpdateProfileRequest):
 
 @app.delete("/users/{email}")
 def delete_account(email: str):
-    """Permanently deletes a user and everything tied to them — goals,
-    wins, check-ins, daily message history, and active sessions."""
     user = get_user(email)
     user_id = user["id"]
 
@@ -556,17 +538,11 @@ def delete_account(email: str):
     return {"message": "Account deleted"}
 
 
-import random
-from resend_email import send_otp_email
-
 @app.post("/forgot-password")
-def forgot_password(req: dict):
+def forgot_password(req: ForgotPasswordRequest):
     """Generates a 6-digit OTP, saves it to the DB, and emails it to the user."""
-    email = req.get("email", "").strip().lower()
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required")
+    email = req.email.strip().lower()
 
-    # Don't reveal whether the account exists — always return 200
     result = supabase.table("users").select("id, name").eq("email", email).execute()
     if not result.data:
         return {"message": "If an account exists, a reset code has been sent"}
@@ -590,19 +566,15 @@ def forgot_password(req: dict):
 
 
 @app.post("/reset-password")
-def reset_password(req: dict):
+def reset_password(req: ResetPasswordRequest):
     """Verifies the OTP and updates the user's password."""
-    email = req.get("email", "").strip().lower()
-    otp = req.get("otp", "").strip()
-    new_password = req.get("new_password", "")
-
-    if not email or not otp or not new_password:
-        raise HTTPException(status_code=400, detail="Email, OTP, and new password are required")
+    email = req.email.strip().lower()
+    otp = req.otp.strip()
+    new_password = req.new_password
 
     if len(new_password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
-    # Find valid OTP
     result = supabase.table("password_reset_otps").select("*").eq("email", email).eq("otp", otp).eq("used", False).execute()
 
     if not result.data:
@@ -613,17 +585,15 @@ def reset_password(req: dict):
     if expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Reset code has expired — request a new one")
 
-    # Update password
     supabase.table("users").update({
         "password_hash": hash_password(new_password)
     }).eq("email", email).execute()
 
-    # Mark OTP as used
     supabase.table("password_reset_otps").update({"used": True}).eq("id", otp_row["id"]).execute()
 
     return {"message": "Password updated successfully"}
 
+
 # Start scheduler when app starts
 from scheduler import start_scheduler
 start_scheduler()
-
