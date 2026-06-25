@@ -1166,9 +1166,9 @@
             <span>WhatsApp connected</span>
           </div>
           <div class="delivery-row muted">
-            <span>Sent daily</span>
-            <span>8:00 AM IST</span>
-          </div>
+          <span>Sent daily</span>
+          <span id="deliveryTimeDisplay">8:00 AM IST</span>
+        </div>
         </div>
       </section>
 
@@ -1324,6 +1324,7 @@
     var savedTime = currentUser.delivery_time || '08:00';
     document.getElementById('pTime').value = savedTime;
     document.getElementById('pTimeDisplay').textContent = 'Daily at ' + formatTimeDisplay(savedTime);
+    document.getElementById('deliveryTimeDisplay').textContent = formatTimeDisplay(savedTime) + ' IST';
 
     var hour = new Date().getHours();
     var greet = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
